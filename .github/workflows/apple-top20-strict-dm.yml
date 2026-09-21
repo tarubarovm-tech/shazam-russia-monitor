@@ -1,0 +1,24 @@
+name: One-time strict Apple Top 20 DM
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Run strict Apple Top 20 verifier and send DM
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          MUSICFETCH_TOKEN: ${{ secrets.MUSICFETCH_TOKEN }}
+        run: python scripts/send_apple_top20_strict_dm.py
