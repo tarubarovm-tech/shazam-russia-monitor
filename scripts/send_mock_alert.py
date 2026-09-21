@@ -6,10 +6,10 @@ PRIVATE_CHAT_ID = "710097553"
 MOCK_MESSAGE = """🧪 ТЕСТ / СИМУЛЯЦИЯ
 
 ✅ ПОДХОДЯЩИЙ ТРЕК
-#47 Night Drive — Neon Hearts
-🏷 Label: Moonlight Records
-Yandex match: title=0.92 · artist=0.71
-🔗 Spotify: https://open.spotify.com/track/3n3Ppam7vgaVa1iaRUc9Lp
+#47 Agromoza — Raigañu
+🏷 Label: Raigañu / Musicasturiana.com
+Yandex match: title=0.93 · artist=0.74
+🔗 Spotify: https://open.spotify.com/track/5xTAyq5zGggEZUftVmv1dz
 
 Смоделированный алерт для проверки формата."""
 
