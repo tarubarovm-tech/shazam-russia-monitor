@@ -5,10 +5,12 @@ import io
 import json
 import os
 import re
+import time
 import unicodedata
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from difflib import SequenceMatcher
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -24,9 +26,17 @@ SHAZAM = "https://www.shazam.com/services/charts/csv/top-200/russia/"
 APPLE = "https://music.apple.com/ru/playlist/shazam-charts-russia/pl.b96cdf2da806490ea383b8a0cb45790d"
 ITUNES_SEARCH = "https://itunes.apple.com/search"
 ITUNES_LOOKUP = "https://itunes.apple.com/lookup"
-SCHEMA_VERSION = 3
+YANDEX_SEARCH = "https://music.yandex.ru/handlers/music-search.jsx"
+SCHEMA_VERSION = 4
 DUPLICATE_WINDOW_SECONDS = 6 * 60 * 60
 LABEL_CACHE_SECONDS = 30 * 24 * 60 * 60
+YANDEX_CACHE_SECONDS = {
+    "found": 24 * 60 * 60,
+    "not_found": 2 * 60 * 60,
+    "uncertain": 30 * 60,
+    "error": 10 * 60,
+}
+YANDEX_RETRIES = 3
 
 
 def repair_text(value):
@@ -59,12 +69,22 @@ def clean_track(title, artist="", label=""):
     }
 
 
-def display_track(track):
+def yandex_status_text(info):
+    status = (info or {}).get("status")
+    return {
+        "found": "🟡 Яндекс: есть",
+        "not_found": "⚪ Яндекс: не найден",
+        "uncertain": "🟠 Яндекс: неоднозначно",
+        "error": "⚠️ Яндекс: проверка недоступна",
+    }.get(status, "⚠️ Яндекс: не проверен")
+
+
+def display_track(track, yandex_info=None):
     title = repair_text(track.get("title", ""))
     artist = repair_text(track.get("artist", ""))
     label = repair_text(track.get("label", ""))
     text = title + (f" — {artist}" if artist else "")
-    return f"{text} · 🏷 {label or 'не найден'}"
+    return f"{text} · 🏷 {label or 'не найден'} · {yandex_status_text(yandex_info)}"
 
 
 def send(text):
@@ -346,6 +366,221 @@ def artist_matches(expected, actual):
     return bool(a and b and len(a & b) / min(len(a), len(b)) >= 0.5)
 
 
+def title_core(value):
+    value = repair_text(value)
+    value = re.sub(
+        r"\s*[\(\[]\s*(?:feat|ft|featuring)\.?\s+.*?[\)\]]\s*$",
+        "",
+        value,
+        flags=re.I,
+    )
+    value = re.sub(r"\s+(?:feat|ft|featuring)\.?\s+.+$", "", value, flags=re.I)
+    return match_id(value)
+
+
+def similarity(a, b):
+    a = match_id(a)
+    b = match_id(b)
+    if not a or not b:
+        return 0.0
+    if a == b:
+        return 1.0
+    return SequenceMatcher(None, a, b).ratio()
+
+
+def artist_parts(value):
+    value = repair_text(value)
+    value = re.sub(r"\s+(?:feat|ft|featuring)\.?\s+", ",", value, flags=re.I)
+    parts = re.split(r"\s*(?:,|&|;|×|\+)\s*", value)
+    out = []
+    for part in parts:
+        normalized = match_id(part)
+        if normalized and normalized not in out:
+            out.append(normalized)
+    return out
+
+
+def yandex_item_title(item):
+    title = repair_text(item.get("title", ""))
+    version = repair_text(item.get("version", ""))
+    if version and match_id(version) not in match_id(title):
+        return f"{title} ({version})"
+    return title
+
+
+def yandex_item_artists(item):
+    result = []
+    for artist in item.get("artists", []) if isinstance(item.get("artists"), list) else []:
+        if isinstance(artist, dict) and artist.get("name"):
+            result.append(repair_text(artist["name"]))
+    return result
+
+
+def yandex_title_score(expected, candidate):
+    exact = similarity(expected, candidate)
+    if match_id(expected) == match_id(candidate):
+        return 1.0
+    expected_core = title_core(expected)
+    candidate_core = title_core(candidate)
+    if expected_core and expected_core == candidate_core:
+        return max(exact, 0.985)
+    return exact
+
+
+def yandex_artist_score(expected, actual_names):
+    expected_parts = artist_parts(expected)
+    actual = [match_id(x) for x in actual_names if match_id(x)]
+    if not expected_parts or not actual:
+        return 0.0
+
+    if len(expected_parts) == 1:
+        return max(similarity(expected_parts[0], name) for name in actual)
+
+    best_each = [
+        max(similarity(expected_part, actual_name) for actual_name in actual)
+        for expected_part in expected_parts
+    ]
+    coverage = sum(score >= 0.88 for score in best_each) / len(best_each)
+    mean_score = sum(best_each) / len(best_each)
+    primary_score = best_each[0]
+
+    expected_words = set(" ".join(expected_parts).split())
+    actual_words = set(" ".join(actual).split())
+    word_overlap = (
+        len(expected_words & actual_words) / len(expected_words)
+        if expected_words
+        else 0.0
+    )
+    return max(
+        0.55 * mean_score + 0.30 * coverage + 0.15 * primary_score,
+        0.85 * word_overlap + 0.15 * primary_score,
+    )
+
+
+def yandex_candidate_quality(track, item):
+    candidate_title = yandex_item_title(item)
+    candidate_artists = yandex_item_artists(item)
+    title_score = yandex_title_score(track.get("title", ""), candidate_title)
+    artist_score = yandex_artist_score(track.get("artist", ""), candidate_artists)
+
+    if title_score >= 0.995 and artist_score >= 0.82:
+        status = "found"
+    elif title_score >= 0.97 and artist_score >= 0.93:
+        status = "found"
+    elif title_score >= 0.92 and artist_score >= 0.60:
+        status = "uncertain"
+    else:
+        status = "reject"
+
+    return {
+        "status": status,
+        "score": round(0.62 * title_score + 0.38 * artist_score, 4),
+        "title_score": round(title_score, 4),
+        "artist_score": round(artist_score, 4),
+        "matched_title": candidate_title,
+        "matched_artist": ", ".join(candidate_artists),
+    }
+
+
+def yandex_track_url(item):
+    track_id = item.get("id")
+    albums = item.get("albums") if isinstance(item.get("albums"), list) else []
+    album_id = albums[0].get("id") if albums and isinstance(albums[0], dict) else None
+    if track_id and album_id:
+        return f"https://music.yandex.ru/album/{album_id}/track/{track_id}"
+    return ""
+
+
+def yandex_search_results(query):
+    last_error = None
+    headers = dict(H)
+    headers.update(
+        {
+            "Accept": "application/json,text/plain,*/*",
+            "Referer": "https://music.yandex.ru/",
+        }
+    )
+    for attempt in range(1, YANDEX_RETRIES + 1):
+        try:
+            response = get(
+                YANDEX_SEARCH,
+                params={"text": query, "page": 0},
+                headers=headers,
+                timeout=18,
+            )
+            data = response.json()
+            tracks = data.get("tracks", {}) if isinstance(data, dict) else {}
+            items = tracks.get("items", []) if isinstance(tracks, dict) else []
+            if not isinstance(items, list):
+                raise ValueError("Yandex Music returned an invalid tracks list")
+            return [item for item in items if isinstance(item, dict)]
+        except (requests.RequestException, ValueError) as exc:
+            last_error = exc
+            if attempt < YANDEX_RETRIES:
+                time.sleep(attempt)
+    raise RuntimeError(f"Yandex Music search failed: {last_error}")
+
+
+def yandex_queries(track):
+    title = repair_text(track.get("title", ""))
+    artist = repair_text(track.get("artist", ""))
+    parts = artist_parts(artist)
+    primary = parts[0] if parts else ""
+    queries = [
+        " ".join(x for x in (title, artist) if x),
+        " ".join(x for x in (title, primary) if x),
+        title,
+    ]
+    out = []
+    for query in queries:
+        query = query.strip()
+        if query and query not in out:
+            out.append(query)
+    return out
+
+
+def check_yandex_track(track):
+    best_uncertain = None
+    successful_queries = 0
+    errors = []
+    seen = set()
+
+    for query in yandex_queries(track):
+        try:
+            items = yandex_search_results(query)
+            successful_queries += 1
+        except Exception as exc:
+            errors.append(str(exc))
+            continue
+
+        for item in items:
+            identity = str(item.get("id") or "") + "|" + yandex_item_title(item)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            quality = yandex_candidate_quality(track, item)
+            if quality["status"] == "reject":
+                continue
+
+            quality["url"] = yandex_track_url(item)
+            if quality["status"] == "found":
+                return quality
+
+            if best_uncertain is None or quality["score"] > best_uncertain["score"]:
+                best_uncertain = quality
+
+    if best_uncertain:
+        return best_uncertain
+    if successful_queries:
+        return {"status": "not_found", "score": 0.0, "url": ""}
+    return {
+        "status": "error",
+        "score": 0.0,
+        "url": "",
+        "error": "; ".join(errors[-2:]) or "Yandex Music search unavailable",
+    }
+
+
 def find_collection(track):
     title = match_id(track.get("title", ""))
     if not title:
@@ -401,6 +636,41 @@ def lookup_collection_labels(collections):
 
 def cache_key(track):
     return f"{text_id(track.get('title', ''))}\x1f{text_id(track.get('artist', ''))}"
+
+
+def cached_yandex(state, track, now_utc):
+    entry = state.get("_yandex_cache", {}).get(cache_key(track))
+    if not isinstance(entry, dict):
+        return None
+    status = entry.get("status")
+    ttl = YANDEX_CACHE_SECONDS.get(status, 0)
+    at = parse_utc(entry.get("at"))
+    if not at or not ttl or (now_utc - at).total_seconds() > ttl:
+        return None
+    return dict(entry)
+
+
+def store_yandex_cache(state, track, info, now_utc):
+    cache = state.setdefault("_yandex_cache", {})
+    entry = {
+        "status": info.get("status", "error"),
+        "score": info.get("score", 0.0),
+        "url": info.get("url", ""),
+        "matched_title": info.get("matched_title", ""),
+        "matched_artist": info.get("matched_artist", ""),
+        "at": now_utc.isoformat().replace("+00:00", "Z"),
+    }
+    if info.get("error"):
+        entry["error"] = info["error"]
+    cache[cache_key(track)] = entry
+    if len(cache) > 1500:
+        newest = sorted(
+            cache.items(),
+            key=lambda item: parse_utc(item[1].get("at"))
+            or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )[:1200]
+        state["_yandex_cache"] = dict(newest)
 
 
 def cached_label(state, track, now_utc):
@@ -477,7 +747,42 @@ def enrich_report_labels(state, delta, now_utc):
             store_label_cache(state, track, label, now_utc)
 
 
-def report(name, delta, now):
+def enrich_report_yandex(state, delta, now_utc):
+    tracks = report_tracks(delta)
+    result = {}
+    unresolved = []
+
+    for track in tracks:
+        key = cache_key(track)
+        cached = cached_yandex(state, track, now_utc)
+        if cached:
+            result[key] = cached
+        else:
+            unresolved.append(track)
+
+    if unresolved:
+        workers = min(4, len(unresolved))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(check_yandex_track, track): track for track in unresolved}
+            for future in as_completed(futures):
+                track = futures[future]
+                key = cache_key(track)
+                try:
+                    info = future.result()
+                except Exception as exc:
+                    info = {
+                        "status": "error",
+                        "score": 0.0,
+                        "url": "",
+                        "error": str(exc),
+                    }
+                result[key] = info
+                store_yandex_cache(state, track, info, now_utc)
+
+    return result
+
+
+def report(name, delta, now, yandex_info=None):
     added, gone, moved = delta["added"], delta["gone"], delta["moved"]
     lines = [
         f"🔄 {name}",
@@ -485,12 +790,12 @@ def report(name, delta, now):
         f"Новых: {len(added)} | Ушло: {len(gone)} | Сменили позицию: {len(moved)}",
     ]
     if added:
-        lines += ["", "🆕 НОВЫЕ:"] + [f"#{p} {display_track(track)}" for p, _, track in added[:30]]
+        lines += ["", "🆕 НОВЫЕ:"] + [f"#{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))}" for p, _, track in added[:30]]
     if gone:
-        lines += ["", "❌ УШЛИ:"] + [f"было #{p} {display_track(track)}" for p, _, track in gone[:20]]
+        lines += ["", "❌ УШЛИ:"] + [f"было #{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))}" for p, _, track in gone[:20]]
     if moved:
         lines += ["", "📈 ИЗМЕНЕНИЯ ПОЗИЦИЙ:"] + [
-            f"{'↑' if p < old_p else '↓'} #{p} {display_track(track)} (было #{old_p})"
+            f"{'↑' if p < old_p else '↓'} #{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))} (было #{old_p})"
             for _, p, old_p, _, track in moved[:25]
         ]
     return "\n".join(lines)
@@ -592,7 +897,8 @@ def main():
                         print(f"Duplicate chart event suppressed for {name}")
                     else:
                         enrich_report_labels(state, delta, now_utc)
-                        send(report(name, delta, now_local))
+                        yandex_info = enrich_report_yandex(state, delta, now_utc)
+                        send(report(name, delta, now_local, yandex_info))
                         remember_event(state, fingerprint, name, now_utc)
                         dirty = True
             else:
