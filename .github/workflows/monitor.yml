@@ -3,7 +3,7 @@ name: Check Apple chart with Shazam fallback
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17,47 * * * *"
+    - cron: "*/10 * * * *"
 
 permissions:
   contents: write
