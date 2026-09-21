@@ -971,7 +971,7 @@ def filter_non_major_entries(state, source, entries, now_utc):
         _, _, track = entry
         label = repair_text(track.get("label", ""))
         if not label:
-            set_track_registry_status(state, track, "pending", source, now_utc)
+            selected.append(entry)
             continue
 
         family = major_label_family(label)
