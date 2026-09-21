@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 import monitor
 
@@ -63,6 +64,114 @@ class MonitorTests(unittest.TestCase):
             monitor.parse_label_copyright("℗ 2026 Warner Music"),
             "Warner Music",
         )
+
+
+    def test_yandex_exact_match_is_found(self):
+        track = {"title": "Вены-реки", "artist": "Анастасия Стоцкая", "label": ""}
+        item = {
+            "id": "1",
+            "title": "Вены-реки",
+            "artists": [{"name": "Анастасия Стоцкая"}],
+            "albums": [{"id": "10", "title": "Album"}],
+        }
+        quality = monitor.yandex_candidate_quality(track, item)
+        self.assertEqual(quality["status"], "found")
+        self.assertGreaterEqual(quality["title_score"], 0.99)
+        self.assertGreaterEqual(quality["artist_score"], 0.99)
+
+    def test_yandex_wrong_artist_is_not_found(self):
+        track = {"title": "Вены-реки", "artist": "Анастасия Стоцкая", "label": ""}
+        item = {
+            "id": "2",
+            "title": "Вены-реки",
+            "artists": [{"name": "Совсем другой артист"}],
+            "albums": [{"id": "11", "title": "Album"}],
+        }
+        quality = monitor.yandex_candidate_quality(track, item)
+        self.assertEqual(quality["status"], "reject")
+
+    def test_yandex_transliteration_matches_artist(self):
+        self.assertGreaterEqual(
+            monitor.similarity("Basta", "Баста"),
+            0.99,
+        )
+        self.assertGreaterEqual(
+            monitor.similarity("Moya Mishel", "Моя Мишель"),
+            0.90,
+        )
+
+    def test_yandex_multi_artist_requires_good_coverage(self):
+        track = {"title": "Die With A Smile", "artist": "Lady Gaga & Bruno Mars", "label": ""}
+        one_artist = {
+            "id": "3",
+            "title": "Die With A Smile",
+            "artists": [{"name": "Lady Gaga"}],
+            "albums": [{"id": "12", "title": "Album"}],
+        }
+        both_artists = {
+            "id": "4",
+            "title": "Die With A Smile",
+            "artists": [{"name": "Lady Gaga"}, {"name": "Bruno Mars"}],
+            "albums": [{"id": "13", "title": "Album"}],
+        }
+        self.assertNotEqual(
+            monitor.yandex_candidate_quality(track, one_artist)["status"],
+            "found",
+        )
+        self.assertEqual(
+            monitor.yandex_candidate_quality(track, both_artists)["status"],
+            "found",
+        )
+
+    def test_yandex_missing_artist_is_uncertain_not_found(self):
+        track = {"title": "Song", "artist": "", "label": ""}
+        item = {
+            "id": "5",
+            "title": "Song",
+            "artists": [{"name": "Artist"}],
+            "albums": [{"id": "14", "title": "Album"}],
+        }
+        self.assertEqual(
+            monitor.yandex_candidate_quality(track, item)["status"],
+            "uncertain",
+        )
+
+    def test_yandex_not_found_requires_all_queries_to_succeed(self):
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+
+        def partial_failure(query):
+            if query == monitor.yandex_queries(track)[0]:
+                raise RuntimeError("temporary")
+            return []
+
+        with patch.object(monitor, "yandex_search_results", side_effect=partial_failure):
+            result = monitor.check_yandex_track(track)
+        self.assertEqual(result["status"], "error")
+
+    def test_yandex_returns_not_found_only_after_complete_empty_search(self):
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        with patch.object(monitor, "yandex_search_results", return_value=[]):
+            result = monitor.check_yandex_track(track)
+        self.assertEqual(result["status"], "not_found")
+
+    def test_yandex_found_short_circuits_on_verified_candidate(self):
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        item = {
+            "id": "6",
+            "title": "Song",
+            "artists": [{"name": "Artist"}],
+            "albums": [{"id": "15", "title": "Album"}],
+        }
+        with patch.object(monitor, "yandex_search_results", return_value=[item]) as mocked:
+            result = monitor.check_yandex_track(track)
+        self.assertEqual(result["status"], "found")
+        self.assertEqual(result["url"], "https://music.yandex.ru/album/15/track/6")
+        self.assertEqual(mocked.call_count, 1)
+
+    def test_yandex_status_is_rendered(self):
+        track = {"title": "Song", "artist": "Artist", "label": "Label"}
+        rendered = monitor.display_track(track, {"status": "found"})
+        self.assertIn("🟡 Яндекс: есть", rendered)
 
 
 if __name__ == "__main__":
