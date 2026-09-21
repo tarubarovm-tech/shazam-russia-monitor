@@ -589,6 +589,7 @@ def check_yandex_track(track):
 
     item = source["item"]
     track_id = item.get("trackId")
+    apple_url = repair_text(item.get("trackViewUrl", ""))
     if not track_id:
         return {
             "status": "uncertain",
@@ -616,6 +617,7 @@ def check_yandex_track(track):
                     "score": source["quality"]["score"],
                     "url": "",
                     "source_url": resolver_url,
+                    "apple_url": apple_url,
                     "error": "Songlink не подтвердил название трека",
                 }
 
@@ -626,6 +628,7 @@ def check_yandex_track(track):
                     "score": source["quality"]["score"],
                     "url": urls[0],
                     "source_url": resolver_url,
+                    "apple_url": apple_url,
                     "itunes_track_id": str(track_id),
                     "matched_title": repair_text(item.get("trackName", "")),
                     "matched_artist": repair_text(item.get("artistName", "")),
@@ -636,6 +639,7 @@ def check_yandex_track(track):
                 "score": source["quality"]["score"],
                 "url": "",
                 "source_url": resolver_url,
+                "apple_url": apple_url,
                 "itunes_track_id": str(track_id),
                 "matched_title": repair_text(item.get("trackName", "")),
                 "matched_artist": repair_text(item.get("artistName", "")),
@@ -650,6 +654,7 @@ def check_yandex_track(track):
         "score": source["quality"]["score"],
         "url": "",
         "source_url": resolver_url,
+        "apple_url": apple_url,
         "error": f"Songlink недоступен: {last_error}",
     }
 
@@ -706,6 +711,7 @@ def store_yandex_cache(state, track, info, now_utc):
         "matched_title": info.get("matched_title", ""),
         "matched_artist": info.get("matched_artist", ""),
         "source_url": info.get("source_url", ""),
+        "apple_url": info.get("apple_url", ""),
         "itunes_track_id": info.get("itunes_track_id", ""),
         "at": now_utc.isoformat().replace("+00:00", "Z"),
     }
@@ -845,6 +851,11 @@ def select_new_without_yandex(delta, yandex_info):
     return selected
 
 
+def track_open_url(info):
+    info = info or {}
+    return repair_text(info.get("apple_url", "")) or repair_text(info.get("source_url", ""))
+
+
 def report_new_without_yandex(name, added, now, yandex_info=None):
     lines = [
         f"🚨 {name}",
@@ -853,10 +864,12 @@ def report_new_without_yandex(name, added, now, yandex_info=None):
         "",
         "🆕 НОВЫЕ:",
     ]
-    lines += [
-        f"#{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))}"
-        for p, _, track in added
-    ]
+    for p, _, track in added:
+        info = (yandex_info or {}).get(cache_key(track), {})
+        lines.append(f"#{p} {display_track(track, info)}")
+        open_url = track_open_url(info)
+        if open_url:
+            lines.append(f"🔗 Открыть трек: {open_url}")
     return "\n".join(lines)
 
 
