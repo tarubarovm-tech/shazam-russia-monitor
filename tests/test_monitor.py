@@ -869,5 +869,101 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(filtered, [])
 
 
+    def test_similarity_channels_keep_text_and_latin_separate(self):
+        scores = monitor.similarity_channels("Моя Мишель", "Moya Mishel")
+        self.assertLess(scores["text"], 0.50)
+        self.assertGreaterEqual(scores["latin"], 0.90)
+        self.assertEqual(scores["best"], scores["latin"])
+
+    def test_musicfetch_match_accepts_cyrillic_to_latin_transliteration(self):
+        track = {
+            "title": "Если я буду танцевать",
+            "artist": "Баста & Моя Мишель",
+            "label": "",
+        }
+        result = {
+            "type": "track",
+            "name": "Esli ya budu tantsevat",
+            "artists": [
+                {"name": "Basta"},
+                {"name": "Moya Mishel"},
+            ],
+        }
+        quality = monitor.musicfetch_match_quality(track, result)
+        self.assertTrue(quality["matches"])
+        self.assertGreaterEqual(quality["title_latin"], 0.93)
+        self.assertGreaterEqual(quality["artist_latin"], 0.88)
+
+    def test_musicfetch_match_accepts_native_text(self):
+        track = {
+            "title": "Если я буду танцевать",
+            "artist": "Баста & Моя Мишель",
+            "label": "",
+        }
+        result = {
+            "type": "track",
+            "name": "Если я буду танцевать",
+            "artists": [
+                {"name": "Баста"},
+                {"name": "Моя Мишель"},
+            ],
+        }
+        quality = monitor.musicfetch_match_quality(track, result)
+        self.assertTrue(quality["matches"])
+        self.assertGreaterEqual(quality["title_text"], 0.99)
+        self.assertGreaterEqual(quality["artist_text"], 0.99)
+
+    def test_musicfetch_match_rejects_wrong_artist_even_when_title_matches(self):
+        track = {
+            "title": "Если я буду танцевать",
+            "artist": "Баста & Моя Мишель",
+            "label": "",
+        }
+        result = {
+            "type": "track",
+            "name": "Esli ya budu tantsevat",
+            "artists": [{"name": "Completely Different Artist"}],
+        }
+        quality = monitor.musicfetch_match_quality(track, result)
+        self.assertFalse(quality["matches"])
+        self.assertGreaterEqual(quality["title_latin"], 0.93)
+        self.assertLess(quality["artist_latin"], 0.88)
+
+    def test_musicfetch_verified_missing_keeps_both_match_channels(self):
+        track = {
+            "title": "Если я буду танцевать",
+            "artist": "Баста & Моя Мишель",
+            "label": "",
+        }
+        url_result = {
+            "type": "track",
+            "name": "Esli ya budu tantsevat",
+            "artists": [{"name": "Basta"}, {"name": "Moya Mishel"}],
+            "isrc": "RUABC2600001",
+            "services": {},
+        }
+        isrc_result = {
+            "type": "track",
+            "name": "Если я буду танцевать",
+            "artists": [{"name": "Баста"}, {"name": "Моя Мишель"}],
+            "isrc": "RUABC2600001",
+            "services": {},
+        }
+        with patch.object(
+            monitor,
+            "musicfetch_get",
+            side_effect=[(url_result, ""), (isrc_result, "")],
+        ):
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/1?i=2",
+            )
+        self.assertEqual(result["status"], "verified_missing")
+        self.assertTrue(result["url_match"]["matches"])
+        self.assertTrue(result["isrc_match"]["matches"])
+        self.assertGreaterEqual(result["url_match"]["title_latin"], 0.93)
+        self.assertGreaterEqual(result["isrc_match"]["title_text"], 0.99)
+
+
 if __name__ == "__main__":
     unittest.main()
