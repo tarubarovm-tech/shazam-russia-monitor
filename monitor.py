@@ -1389,7 +1389,7 @@ def enrich_report_yandex(state, delta, now_utc):
             unresolved.append(track)
 
     if unresolved:
-        workers = min(4, len(unresolved))
+        workers = min(12, len(unresolved))
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = {pool.submit(check_yandex_track, track): track for track in unresolved}
             for future in as_completed(futures):
@@ -1715,7 +1715,6 @@ def process_source(state, source_name, current, now_local, now_utc):
             candidates = eligible_new_entries(state, added_only_delta(delta))
             if candidates:
                 candidate_delta = {"added": candidates, "gone": [], "moved": []}
-                enrich_report_labels(state, candidate_delta, now_utc)
                 yandex_info = enrich_report_yandex(state, candidate_delta, now_utc)
                 selected = apply_yandex_outcomes(
                     state,
@@ -1724,13 +1723,16 @@ def process_source(state, source_name, current, now_local, now_utc):
                     yandex_info,
                     now_utc,
                 )
-                selected = filter_non_major_entries(
-                    state,
-                    source_name,
-                    selected,
-                    now_utc,
-                    yandex_info,
-                )
+                if selected:
+                    selected_delta = {"added": selected, "gone": [], "moved": []}
+                    enrich_report_labels(state, selected_delta, now_utc)
+                    selected = filter_non_major_entries(
+                        state,
+                        source_name,
+                        selected,
+                        now_utc,
+                        yandex_info,
+                    )
                 dirty = True
 
                 if selected:
