@@ -197,7 +197,7 @@ class MonitorTests(unittest.TestCase):
             monitor.display_track(track, {"status": "found"}),
         )
         self.assertIn(
-            "⚪ Яндекс: не подтверждён",
+            "🟠 Яндекс: не удалось проверить",
             monitor.display_track(track, {"status": "not_confirmed"}),
         )
 
@@ -218,7 +218,7 @@ class MonitorTests(unittest.TestCase):
             "moved": [(3, 7, 10, "moved", {"title": "Moved", "artist": "Artist", "label": ""})],
         }
         yandex_info = {
-            monitor.cache_key(missing): {"status": "not_confirmed"},
+            monitor.cache_key(missing): {"status": "verified_missing"},
             monitor.cache_key(found): {"status": "found"},
             monitor.cache_key(uncertain): {"status": "uncertain"},
             monitor.cache_key(errored): {"status": "error"},
@@ -241,7 +241,7 @@ class MonitorTests(unittest.TestCase):
     def test_new_without_yandex_report_contains_only_selected_tracks(self):
         selected = {"title": "Missing", "artist": "Artist", "label": "Label"}
         yandex_info = {
-            monitor.cache_key(selected): {"status": "not_confirmed"},
+            monitor.cache_key(selected): {"status": "verified_missing"},
         }
         message = monitor.report_new_without_yandex(
             "Shazam Top 200 Russia",
@@ -250,7 +250,7 @@ class MonitorTests(unittest.TestCase):
             yandex_info,
         )
         self.assertIn("Missing — Artist", message)
-        self.assertIn("Яндекс: не подтверждён", message)
+        self.assertIn("Яндекс: не найден", message)
         self.assertNotIn("УШЛИ", message)
         self.assertNotIn("ИЗМЕНЕНИЯ ПОЗИЦИЙ", message)
 
@@ -278,7 +278,7 @@ class MonitorTests(unittest.TestCase):
         selected = {"title": "Missing", "artist": "Artist", "label": "Label"}
         yandex_info = {
             monitor.cache_key(selected): {
-                "status": "not_confirmed",
+                "status": "verified_missing",
                 "apple_url": "https://music.apple.com/ru/song/song/123",
                 "source_url": "https://song.link/i/123",
             },
@@ -420,7 +420,7 @@ class MonitorTests(unittest.TestCase):
         ]
         info = {
             monitor.cache_key(found): {"status": "found"},
-            monitor.cache_key(missing): {"status": "not_confirmed"},
+            monitor.cache_key(missing): {"status": "verified_missing"},
             monitor.cache_key(pending): {"status": "error"},
         }
         selected = monitor.apply_yandex_outcomes(
@@ -657,6 +657,29 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(
             monitor.merge_candidates(out),
             [{"title": "Script Song", "artist": "Script Artist", "label": ""}],
+        )
+
+
+    def test_songlink_not_confirmed_is_not_alertable(self):
+        track = {"title": "Known Yandex Track", "artist": "Artist", "label": ""}
+        delta = {"added": [(1, "known", track)], "gone": [], "moved": []}
+        info = {
+            monitor.cache_key(track): {"status": "not_confirmed"},
+        }
+        self.assertEqual(
+            monitor.select_new_without_yandex(delta, info),
+            [],
+        )
+
+    def test_only_verified_missing_is_alertable(self):
+        track = {"title": "Missing Track", "artist": "Artist", "label": ""}
+        delta = {"added": [(1, "missing", track)], "gone": [], "moved": []}
+        info = {
+            monitor.cache_key(track): {"status": "verified_missing"},
+        }
+        self.assertEqual(
+            monitor.select_new_without_yandex(delta, info),
+            [(1, "missing", track)],
         )
 
 
