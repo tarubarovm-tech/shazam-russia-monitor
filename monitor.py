@@ -33,6 +33,7 @@ SONGLINK_TRACK = "https://song.link/i/{track_id}"
 MUSICFETCH_URL_LOOKUP = "https://api.musicfetch.io/url"
 MUSICFETCH_ISRC_LOOKUP = "https://api.musicfetch.io/isrc"
 MUSICFETCH_TIMEOUT = 30
+YANDEX_MATCH_THRESHOLD = 0.90
 MUSICFETCH_MIN_INTERVAL = float(os.environ.get("MUSICFETCH_MIN_INTERVAL", "10.2"))
 SCHEMA_VERSION = 5
 DUPLICATE_WINDOW_SECONDS = 6 * 60 * 60
@@ -910,9 +911,15 @@ def musicfetch_match_quality(track, result):
         artist_text /= max(1, len(expected_parts))
         artist_latin /= max(1, len(expected_parts))
 
-    title_ok = title_text >= 0.93 or title_latin >= 0.93
+    title_ok = (
+        title_text >= YANDEX_MATCH_THRESHOLD
+        or title_latin >= YANDEX_MATCH_THRESHOLD
+    )
     if expected_artist:
-        artist_ok = artist_text >= 0.88 or artist_latin >= 0.88
+        artist_ok = (
+            artist_text >= YANDEX_MATCH_THRESHOLD
+            or artist_latin >= YANDEX_MATCH_THRESHOLD
+        )
     else:
         artist_ok = True
         title_ok = title_text >= 0.98 or title_latin >= 0.98
