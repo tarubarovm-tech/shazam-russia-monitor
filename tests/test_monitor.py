@@ -1048,5 +1048,31 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(merged[0]["label"], "Label")
 
 
+    def test_yandex_match_threshold_accepts_exactly_90_percent(self):
+        track = {"title": "Apple Song", "artist": "Apple Artist", "label": ""}
+        result = {
+            "type": "track",
+            "name": "Yandex Song",
+            "artists": [{"name": "Yandex Artist"}],
+        }
+        score = {"text": 0.90, "latin": 0.20, "best": 0.90}
+        with patch.object(monitor, "similarity_channels", return_value=score):
+            quality = monitor.musicfetch_match_quality(track, result)
+        self.assertEqual(monitor.YANDEX_MATCH_THRESHOLD, 0.90)
+        self.assertTrue(quality["matches"])
+
+    def test_yandex_match_threshold_rejects_below_90_percent(self):
+        track = {"title": "Apple Song", "artist": "Apple Artist", "label": ""}
+        result = {
+            "type": "track",
+            "name": "Yandex Song",
+            "artists": [{"name": "Yandex Artist"}],
+        }
+        score = {"text": 0.899, "latin": 0.20, "best": 0.899}
+        with patch.object(monitor, "similarity_channels", return_value=score):
+            quality = monitor.musicfetch_match_quality(track, result)
+        self.assertFalse(quality["matches"])
+
+
 if __name__ == "__main__":
     unittest.main()
