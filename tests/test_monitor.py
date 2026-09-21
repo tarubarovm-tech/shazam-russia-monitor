@@ -532,29 +532,20 @@ class MonitorTests(unittest.TestCase):
             [],
         )
 
-    def test_unknown_label_is_not_sent_but_can_be_retried(self):
+    def test_unknown_label_passes_final_filter(self):
         state = {}
         now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
         track = {"title": "Unknown Label", "artist": "Artist", "label": ""}
         monitor.reset_alert_mode(state, now)
+        entry = (11, "unknown", track)
         selected = monitor.filter_non_major_entries(
             state,
             "Apple Music — Shazam Charts Russia",
-            [(11, "unknown", track)],
+            [entry],
             now,
         )
-        self.assertEqual(selected, [])
-        self.assertEqual(
-            monitor.track_registry_status(state, track),
-            "pending",
-        )
-        self.assertEqual(
-            monitor.eligible_new_entries(
-                state,
-                {"added": [(30, "unknown", track)], "gone": [], "moved": []},
-            ),
-            [(30, "unknown", track)],
-        )
+        self.assertEqual(selected, [entry])
+        self.assertIsNone(monitor.track_registry_status(state, track))
 
     def test_non_major_label_passes_final_filter(self):
         state = {}
