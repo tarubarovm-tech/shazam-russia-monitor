@@ -1,0 +1,22 @@
+name: One-time Apple Top 200 strict audit
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Audit all 200 Apple tracks
+        env:
+          MUSICFETCH_TOKEN: ${{ secrets.MUSICFETCH_TOKEN }}
+        run: python scripts/audit_apple_top200.py
