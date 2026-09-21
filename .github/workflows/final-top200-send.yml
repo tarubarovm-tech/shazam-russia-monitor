@@ -1,0 +1,24 @@
+name: Final Apple Top 200 filtered send
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Check all 200 and send only verified missing non-major
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          MUSICFETCH_TOKEN: ${{ secrets.MUSICFETCH_TOKEN }}
+        run: python scripts/final_top200_send.py
