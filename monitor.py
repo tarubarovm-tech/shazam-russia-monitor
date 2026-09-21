@@ -561,16 +561,29 @@ def title_core(value):
     return match_id(value)
 
 
+def similarity_channels(a, b):
+    left = match_id(a)
+    right = match_id(b)
+    if not left or not right:
+        return {"text": 0.0, "latin": 0.0, "best": 0.0}
+
+    direct = 1.0 if left == right else SequenceMatcher(None, left, right).ratio()
+    left_latin = latinize_ru(left)
+    right_latin = latinize_ru(right)
+    latin = (
+        1.0
+        if left_latin == right_latin
+        else SequenceMatcher(None, left_latin, right_latin).ratio()
+    )
+    return {
+        "text": direct,
+        "latin": latin,
+        "best": max(direct, latin),
+    }
+
+
 def similarity(a, b):
-    a = match_id(a)
-    b = match_id(b)
-    if not a or not b:
-        return 0.0
-    if a == b:
-        return 1.0
-    direct = SequenceMatcher(None, a, b).ratio()
-    translit = SequenceMatcher(None, latinize_ru(a), latinize_ru(b)).ratio()
-    return max(direct, translit)
+    return similarity_channels(a, b)["best"]
 
 
 def artist_parts(value):
@@ -760,20 +773,85 @@ def musicfetch_artist_names(result):
     return names
 
 
-def musicfetch_result_matches(track, result):
+def _best_channel_score(expected, candidates, channel):
+    values = []
+    for candidate in candidates:
+        scores = similarity_channels(expected, candidate)
+        values.append(scores[channel])
+    return max(values) if values else 0.0
+
+
+def musicfetch_match_quality(track, result):
     if not isinstance(result, dict):
-        return False
+        return {
+            "matches": False,
+            "title_text": 0.0,
+            "title_latin": 0.0,
+            "artist_text": 0.0,
+            "artist_latin": 0.0,
+        }
     if result.get("type") not in (None, "track"):
-        return False
+        return {
+            "matches": False,
+            "title_text": 0.0,
+            "title_latin": 0.0,
+            "artist_text": 0.0,
+            "artist_latin": 0.0,
+        }
+
     title = repair_text(result.get("name") or result.get("title") or "")
     if not title:
-        return False
-    title_score = title_match_score(track.get("title", ""), title)
+        return {
+            "matches": False,
+            "title_text": 0.0,
+            "title_latin": 0.0,
+            "artist_text": 0.0,
+            "artist_latin": 0.0,
+        }
+
+    expected_title = track.get("title", "")
+    title_scores = similarity_channels(expected_title, title)
+
+    expected_core = title_core(expected_title)
+    actual_core = title_core(title)
+    if expected_core and actual_core:
+        core_scores = similarity_channels(expected_core, actual_core)
+        title_text = max(title_scores["text"], core_scores["text"])
+        title_latin = max(title_scores["latin"], core_scores["latin"])
+    else:
+        title_text = title_scores["text"]
+        title_latin = title_scores["latin"]
+
     artists = musicfetch_artist_names(result)
-    artist_score = artist_match_score(track.get("artist", ""), artists)
-    if track.get("artist"):
-        return title_score >= 0.93 and artist_score >= 0.88
-    return title_score >= 0.98
+    expected_artist = repair_text(track.get("artist", ""))
+    artist_text = 0.0
+    artist_latin = 0.0
+    if expected_artist and artists:
+        expected_parts = artist_parts(expected_artist)
+        for part in expected_parts:
+            artist_text += _best_channel_score(part, artists, "text")
+            artist_latin += _best_channel_score(part, artists, "latin")
+        artist_text /= max(1, len(expected_parts))
+        artist_latin /= max(1, len(expected_parts))
+
+    title_ok = title_text >= 0.93 or title_latin >= 0.93
+    if expected_artist:
+        artist_ok = artist_text >= 0.88 or artist_latin >= 0.88
+    else:
+        artist_ok = True
+        title_ok = title_text >= 0.98 or title_latin >= 0.98
+
+    return {
+        "matches": bool(title_ok and artist_ok),
+        "title_text": round(title_text, 4),
+        "title_latin": round(title_latin, 4),
+        "artist_text": round(artist_text, 4),
+        "artist_latin": round(artist_latin, 4),
+    }
+
+
+def musicfetch_result_matches(track, result):
+    return musicfetch_match_quality(track, result)["matches"]
 
 
 def musicfetch_yandex_url(result):
@@ -855,17 +933,20 @@ def musicfetch_verify_yandex(track, apple_url):
     )
     if error:
         return {"status": "not_confirmed", "url": "", "error": error}
-    if not musicfetch_result_matches(track, url_result):
+    url_match = musicfetch_match_quality(track, url_result)
+    if not url_match["matches"]:
         return {
             "status": "not_confirmed",
             "url": "",
             "error": "Musicfetch URL lookup не подтвердил точный трек",
+            "match": url_match,
         }
 
     common = {
         "isrc": repair_text(url_result.get("isrc", "")),
         "musicfetch_label": repair_text(url_result.get("label", "")),
         "distributor": repair_text(url_result.get("distributor", "")),
+        "url_match": url_match,
     }
     yandex_url = musicfetch_yandex_url(url_result)
     if yandex_url:
@@ -902,11 +983,13 @@ def musicfetch_verify_yandex(track, apple_url):
             "error": error,
             **common,
         }
-    if not musicfetch_result_matches(track, isrc_result):
+    isrc_match = musicfetch_match_quality(track, isrc_result)
+    if not isrc_match["matches"]:
         return {
             "status": "not_confirmed",
             "url": "",
             "error": "Musicfetch ISRC lookup не подтвердил точный трек",
+            "isrc_match": isrc_match,
             **common,
         }
 
@@ -923,6 +1006,7 @@ def musicfetch_verify_yandex(track, apple_url):
         "status": "verified_missing",
         "url": "",
         "verification": "songlink+musicfetch_url+musicfetch_isrc",
+        "isrc_match": isrc_match,
         "evidence": [
             "Songlink: прямой Yandex URL отсутствует",
             "Musicfetch URL lookup: Yandex match отсутствует",
@@ -1067,6 +1151,8 @@ def store_yandex_cache(state, track, info, now_utc):
         "distributor": info.get("distributor", ""),
         "verification": info.get("verification", ""),
         "evidence": info.get("evidence", []),
+        "url_match": info.get("url_match", {}),
+        "isrc_match": info.get("isrc_match", {}),
         "at": now_utc.isoformat().replace("+00:00", "Z"),
     }
     if info.get("error"):
