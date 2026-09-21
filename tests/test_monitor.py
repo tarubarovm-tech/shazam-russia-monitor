@@ -191,5 +191,84 @@ class MonitorTests(unittest.TestCase):
         )
 
 
+    def test_select_new_without_yandex_filters_strictly(self):
+        missing = {"title": "Missing", "artist": "Artist", "label": ""}
+        found = {"title": "Found", "artist": "Artist", "label": ""}
+        uncertain = {"title": "Uncertain", "artist": "Artist", "label": ""}
+        errored = {"title": "Errored", "artist": "Artist", "label": ""}
+        delta = {
+            "added": [
+                (10, "missing", missing),
+                (20, "found", found),
+                (30, "uncertain", uncertain),
+                (40, "errored", errored),
+            ],
+            "gone": [(5, "gone", {"title": "Gone", "artist": "Artist", "label": ""})],
+            "moved": [(3, 7, 10, "moved", {"title": "Moved", "artist": "Artist", "label": ""})],
+        }
+        yandex_info = {
+            monitor.cache_key(missing): {"status": "not_confirmed"},
+            monitor.cache_key(found): {"status": "found"},
+            monitor.cache_key(uncertain): {"status": "uncertain"},
+            monitor.cache_key(errored): {"status": "error"},
+        }
+        selected = monitor.select_new_without_yandex(delta, yandex_info)
+        self.assertEqual(selected, [(10, "missing", missing)])
+
+    def test_added_only_delta_ignores_gone_and_moved(self):
+        track = {"title": "New", "artist": "Artist", "label": ""}
+        delta = {
+            "added": [(12, "new", track)],
+            "gone": [(2, "gone", {"title": "Gone", "artist": "Artist", "label": ""})],
+            "moved": [(5, 8, 13, "moved", {"title": "Moved", "artist": "Artist", "label": ""})],
+        }
+        self.assertEqual(
+            monitor.added_only_delta(delta),
+            {"added": [(12, "new", track)], "gone": [], "moved": []},
+        )
+
+    def test_new_without_yandex_report_contains_only_selected_tracks(self):
+        selected = {"title": "Missing", "artist": "Artist", "label": "Label"}
+        yandex_info = {
+            monitor.cache_key(selected): {"status": "not_confirmed"},
+        }
+        message = monitor.report_new_without_yandex(
+            "Shazam Top 200 Russia",
+            [(17, "missing", selected)],
+            "21.09.2026 15:00 МСК",
+            yandex_info,
+        )
+        self.assertIn("Missing — Artist", message)
+        self.assertIn("Яндекс: не подтверждён", message)
+        self.assertNotIn("УШЛИ", message)
+        self.assertNotIn("ИЗМЕНЕНИЯ ПОЗИЦИЙ", message)
+
+    def test_alert_baseline_activation_memorizes_current_charts(self):
+        state = {
+            "Shazam Top 200 Russia": [{"title": "Old", "artist": "A", "label": ""}],
+            "_recent_events": [{"fingerprint": "old"}],
+        }
+        results = {
+            "Shazam Top 200 Russia": [{"title": "Current", "artist": "A", "label": ""}],
+            "Apple Music — Shazam Charts Russia": [{"title": "Current", "artist": "A", "label": ""}],
+        }
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        self.assertTrue(monitor.needs_alert_baseline(state))
+        monitor.activate_alert_baseline(
+            state,
+            results,
+            ("Shazam Top 200 Russia", "Apple Music — Shazam Charts Russia"),
+            now,
+        )
+        self.assertFalse(monitor.needs_alert_baseline(state))
+        self.assertEqual(state["Shazam Top 200 Russia"], results["Shazam Top 200 Russia"])
+        self.assertEqual(
+            state["Apple Music — Shazam Charts Russia"],
+            results["Apple Music — Shazam Charts Russia"],
+        )
+        self.assertEqual(state["_recent_events"], [])
+        self.assertEqual(state["_baseline_at"], "2026-09-21T12:00:00Z")
+
+
 if __name__ == "__main__":
     unittest.main()
