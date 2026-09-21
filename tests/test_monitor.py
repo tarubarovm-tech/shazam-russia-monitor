@@ -251,7 +251,7 @@ class MonitorTests(unittest.TestCase):
             yandex_info,
         )
         self.assertIn("Missing — Artist", message)
-        self.assertIn("Яндекс: не найден", message)
+        self.assertIn("✅ ПОДХОДЯЩИЙ ТРЕК", message)
         self.assertNotIn("УШЛИ", message)
         self.assertNotIn("ИЗМЕНЕНИЯ ПОЗИЦИЙ", message)
 
@@ -291,7 +291,7 @@ class MonitorTests(unittest.TestCase):
             yandex_info,
         )
         self.assertIn(
-            "🔗 Открыть трек: https://music.apple.com/ru/song/song/123",
+            "🔗 https://music.apple.com/ru/song/song/123",
             message,
         )
 
