@@ -105,7 +105,7 @@ def yandex_status_text(info):
     return {
         "found": "🟡 Яндекс: есть",
         "not_confirmed": "🟠 Яндекс: не удалось проверить",
-        "verified_missing": "⚪ Яндекс: не найден",
+        "verified_missing": "⚪ Яндекс: не найден (3 проверки)",
         "uncertain": "🟠 Яндекс: неоднозначно",
         "error": "⚠️ Яндекс: проверка недоступна",
     }.get(status, "⚠️ Яндекс: не проверен")
@@ -1062,6 +1062,11 @@ def store_yandex_cache(state, track, info, now_utc):
         "source_url": info.get("source_url", ""),
         "apple_url": info.get("apple_url", ""),
         "itunes_track_id": info.get("itunes_track_id", ""),
+        "isrc": info.get("isrc", ""),
+        "musicfetch_label": info.get("musicfetch_label", ""),
+        "distributor": info.get("distributor", ""),
+        "verification": info.get("verification", ""),
+        "evidence": info.get("evidence", []),
         "at": now_utc.isoformat().replace("+00:00", "Z"),
     }
     if info.get("error"):
@@ -1313,21 +1318,24 @@ def major_label_family(label):
     return None
 
 
-def filter_non_major_entries(state, source, entries, now_utc):
+def filter_non_major_entries(state, source, entries, now_utc, yandex_info=None):
     selected = []
     for entry in entries:
         _, _, track = entry
+        info = (yandex_info or {}).get(cache_key(track), {})
         label = repair_text(track.get("label", ""))
-        if not label:
-            selected.append(entry)
-            continue
+        musicfetch_label = repair_text(info.get("musicfetch_label", ""))
+        distributor = repair_text(info.get("distributor", ""))
+        evidence = " / ".join(
+            value for value in (label, musicfetch_label, distributor) if value
+        )
 
-        family = major_label_family(label)
+        family = major_label_family(evidence)
         if family:
             set_track_registry_status(state, track, "major_label", source, now_utc)
             print(
                 f"{source}: suppressed major-label track "
-                f"{track.get('title', '')!r} ({label} -> {family})"
+                f"{track.get('title', '')!r} ({evidence} -> {family})"
             )
             continue
 
@@ -1340,6 +1348,9 @@ def apply_yandex_outcomes(state, source, entries, yandex_info, now_utc):
     for entry in entries:
         _, _, track = entry
         info = (yandex_info or {}).get(cache_key(track), {})
+        if not track.get("label") and info.get("musicfetch_label"):
+            track["label"] = repair_text(info["musicfetch_label"])
+            store_label_cache(state, track, track["label"], now_utc)
         status = info.get("status")
         if status == "found":
             set_track_registry_status(state, track, "yandex_found", source, now_utc)
@@ -1364,7 +1375,7 @@ def report_new_without_yandex(name, added, now, yandex_info=None):
     lines = [
         f"🚨 {name}",
         f"Обнаружено: {now}",
-        f"Новых треков без подтверждения в Яндекс Музыке: {len(added)}",
+        f"Новых треков, не найденных в Яндекс Музыке: {len(added)}",
         "",
         "🆕 НОВЫЕ:",
     ]
@@ -1499,6 +1510,7 @@ def process_source(state, source_name, current, now_local, now_utc):
                     source_name,
                     selected,
                     now_utc,
+                    yandex_info,
                 )
                 dirty = True
 
