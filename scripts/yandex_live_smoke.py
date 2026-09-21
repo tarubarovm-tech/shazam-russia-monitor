@@ -56,7 +56,7 @@ for track in CASES:
         allow_redirects=True,
     )
     text = response.text
-    yandex_links = sorted(set(re.findall(r'https?://music\\.yandex\\.(?:ru|com)/[^"\\'<>\\s]+', text)))
+    yandex_links = sorted(set(re.findall(r"https?://music\\.yandex\\.(?:ru|com)/[^\\\"'<>\\s]+", text)))
     out.append(
         {
             "track": track,
