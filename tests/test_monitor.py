@@ -1091,5 +1091,74 @@ class MonitorTests(unittest.TestCase):
         self.assertTrue(quality["matches"])
 
 
+    def test_check_yandex_uses_native_apple_id_without_itunes_lookup(self):
+        track = {
+            "title": "Exact Song",
+            "artist": "Exact Artist",
+            "label": "",
+            "apple_track_id": "1234567890",
+            "apple_url": "https://music.apple.com/ru/album/song/123?i=1234567890",
+        }
+        response = Mock()
+        response.text = (
+            "<html>Exact Song Exact Artist "
+            "https://music.yandex.ru/track/555</html>"
+        )
+        with patch.object(monitor, "find_itunes_track") as finder:
+            with patch.object(monitor, "get", return_value=response):
+                result = monitor.check_yandex_track(track)
+        finder.assert_not_called()
+        self.assertEqual(result["status"], "found")
+        self.assertEqual(result["itunes_track_id"], "1234567890")
+        self.assertTrue(result["native_apple_id"])
+
+    def test_process_source_skips_label_lookup_when_yandex_found(self):
+        source = "Apple Music — Shazam Charts Russia"
+        old_track = {
+            "title": "Old Song",
+            "artist": "Old Artist",
+            "label": "",
+            "apple_track_id": "1",
+        }
+        new_track = {
+            "title": "New Song",
+            "artist": "New Artist",
+            "label": "",
+            "apple_track_id": "2",
+        }
+        state = {
+            source: [old_track],
+            "_source_baselines": {source: "2026-09-21T12:00:00Z"},
+            "_track_registry": {},
+        }
+        now = monitor.datetime(2026, 9, 21, 12, 30, tzinfo=monitor.timezone.utc)
+        yandex_info = {
+            monitor.cache_key(new_track): {
+                "status": "found",
+                "url": "https://music.yandex.ru/track/2",
+            }
+        }
+        with patch.object(
+            monitor,
+            "enrich_report_yandex",
+            return_value=yandex_info,
+        ) as yandex_lookup:
+            with patch.object(monitor, "enrich_report_labels") as label_lookup:
+                dirty = monitor.process_source(
+                    state,
+                    source,
+                    [old_track, new_track],
+                    "21.09.2026 15:30 МСК",
+                    now,
+                )
+        self.assertTrue(dirty)
+        yandex_lookup.assert_called_once()
+        label_lookup.assert_not_called()
+        self.assertEqual(
+            monitor.track_registry_status(state, new_track),
+            "yandex_found",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
