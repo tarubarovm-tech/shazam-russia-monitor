@@ -1044,7 +1044,7 @@
     },
     {
       "title": "Если я буду танцевать",
-      "artist": "Basta & Moya Mishel",
+      "artist": "Баста & Моя Мишель",
       "label": ""
     },
     {
@@ -1059,7 +1059,7 @@
     },
     {
       "title": "ЗНАК",
-      "artist": "Toxi$ & Dora",
+      "artist": "Toxi$ & Дора",
       "label": ""
     },
     {
@@ -1089,7 +1089,7 @@
     },
     {
       "title": "Мои слёзы",
-      "artist": "Sveta",
+      "artist": "Света",
       "label": ""
     },
     {
@@ -1104,7 +1104,7 @@
     },
     {
       "title": "Loser (Mixed)",
-      "artist": "",
+      "artist": "Tame Impala",
       "label": ""
     },
     {
@@ -1129,7 +1129,7 @@
     },
     {
       "title": "DIGIDI DIGIDI",
-      "artist": "",
+      "artist": "DJ.ILHAM",
       "label": ""
     },
     {
@@ -1159,7 +1159,7 @@
     },
     {
       "title": "Три солнца",
-      "artist": "U-Piter",
+      "artist": "Ю-Питер",
       "label": ""
     },
     {
@@ -1219,7 +1219,7 @@
     },
     {
       "title": "Танцуй (Club Mix)",
-      "artist": "Timur Timbigfamily",
+      "artist": "Тимур Timbigfamily",
       "label": ""
     },
     {
@@ -1259,12 +1259,12 @@
     },
     {
       "title": "Go (feat. Q-Tip)",
-      "artist": "",
+      "artist": "The Chemical Brothers",
       "label": ""
     },
     {
       "title": "Танцуй пока молодой (рэп версия)",
-      "artist": "Ne Budite Spyashchikh",
+      "artist": "Не будите спящих",
       "label": ""
     },
     {
@@ -1284,7 +1284,7 @@
     },
     {
       "title": "Глубина",
-      "artist": "Sergey Bobunets",
+      "artist": "Сергей Бобунец",
       "label": ""
     },
     {
@@ -1329,7 +1329,7 @@
     },
     {
       "title": "Черри Леди",
-      "artist": "Costa Lacoste",
+      "artist": "Коста Лакоста",
       "label": ""
     },
     {
@@ -1394,7 +1394,7 @@
     },
     {
       "title": "Эпилог",
-      "artist": "ANNA ASTI & Dima Bilan",
+      "artist": "ANNA ASTI & Дима Билан",
       "label": ""
     },
     {
@@ -1504,7 +1504,7 @@
     },
     {
       "title": "КУКЛА (feat. VONAMOUR) [Remix 2026]",
-      "artist": "Diskoteka Avariya",
+      "artist": "Дискотека Авария",
       "label": ""
     },
     {
@@ -1544,7 +1544,7 @@
     },
     {
       "title": "What Is Love (7\" Mix)",
-      "artist": "",
+      "artist": "Haddaway",
       "label": ""
     },
     {
@@ -1619,7 +1619,7 @@
     },
     {
       "title": "Фонари",
-      "artist": "Gorod 312",
+      "artist": "Город 312",
       "label": ""
     },
     {
@@ -1669,7 +1669,7 @@
     },
     {
       "title": "Туда (feat. Инна Стил)",
-      "artist": "Mihey & Jumanji",
+      "artist": "Михей & Джуманджи",
       "label": ""
     },
     {
@@ -1719,7 +1719,7 @@
     },
     {
       "title": "Санта Муэрте",
-      "artist": "Noggano",
+      "artist": "Ноггано",
       "label": ""
     },
     {
@@ -1744,7 +1744,7 @@
     },
     {
       "title": "Ты помнишь",
-      "artist": "Mari Kraymbreri",
+      "artist": "Мари Краймбрери",
       "label": ""
     },
     {
@@ -1789,7 +1789,7 @@
     },
     {
       "title": "В сигаретном дыму",
-      "artist": "Basta & Guf",
+      "artist": "Баста & Гуф",
       "label": ""
     },
     {
@@ -1839,7 +1839,7 @@
     },
     {
       "title": "Shape of My Heart (My Songs Version)",
-      "artist": "",
+      "artist": "Sting",
       "label": ""
     },
     {
@@ -1849,7 +1849,7 @@
     },
     {
       "title": "Ай",
-      "artist": "Husky",
+      "artist": "Хаски",
       "label": ""
     },
     {
@@ -1929,7 +1929,7 @@
     },
     {
       "title": "Сердце на костре",
-      "artist": "Zainab Makhaeva",
+      "artist": "Зайнаб Махаева",
       "label": ""
     },
     {
@@ -1964,7 +1964,7 @@
     },
     {
       "title": "Desert Rose",
-      "artist": "",
+      "artist": "Sting",
       "label": ""
     },
     {
@@ -1979,7 +1979,7 @@
     },
     {
       "title": "Колыбельная (OST «На деревню дедушке 2»)",
-      "artist": "Yuri Stoyanov & Fedor Dobronravov",
+      "artist": "Юрий Стоянов & Фёдор Добронравов",
       "label": ""
     },
     {
@@ -2011,6 +2011,1700 @@
     }
   },
   "_recent_events": [],
-  "_alert_mode": "new_tracks_without_yandex_v1",
-  "_baseline_at": "2026-09-21T12:53:11.547298Z"
+  "_alert_mode": "apple_primary_shazam_fallback_v1",
+  "_baseline_at": "2026-09-21T13:53:25.407502Z",
+  "_source_baselines": {
+    "Apple Music — Shazam Charts Russia": "2026-09-21T13:53:25.407502Z",
+    "Shazam Top 200 Russia": "2026-09-21T13:53:25.407502Z"
+  },
+  "_track_registry": {
+    "ты в моих мыслях навсегда\u001fснялцепи|урал гаисин": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "ты в моих мыслях навсегда",
+      "artist": "урал гайсин & снялцепи",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "bad times extended version\u001fimael angel": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Bad Times (Extended Version)",
+      "artist": "Imael Angel",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "bad times\u001fimael angel": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "BAD TIMES",
+      "artist": "Imael Angel",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "rise slow\u001fkimo sounds": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Rise Slow",
+      "artist": "Kimo Sounds",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "movin to the sun\u001fhugel|imael angel|ultra nate": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Movin' To The Sun",
+      "artist": "HUGEL, Imael Angel & Ultra Naté",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "ты не боися ночи\u001fenzro": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Ты не бойся ночи",
+      "artist": "ENZRO",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "море\u001fженя трофимов|комната культуры": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Море",
+      "artist": "Женя Трофимов & Комната культуры",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "take me there\u001fda ti": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Take Me There",
+      "artist": "DA TI",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "если я буду танцевать\u001fбаста|моя мишель": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "Если я буду танцевать",
+      "artist": "Баста & Моя Мишель",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "была не была\u001fjakone|kiliana": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Была, не была",
+      "artist": "Jakone & Kiliana",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "beni al ta ki seni gorene kadar afro house remix\u001fankara echoes": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Beni Al (Ta Ki Seni Görene Kadar) [Afro House Remix]",
+      "artist": "Ankara Echoes",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "знак\u001ftoxi|дора": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "ЗНАК",
+      "artist": "Toxi$ & Дора",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "династия\u001fmadk1d|villian": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "ДИНАСТИЯ",
+      "artist": "VILLIAN & madk1d",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "self aware\u001ftemper city": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Self Aware",
+      "artist": "Temper City",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "феникс\u001fbearwolf": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Феникс",
+      "artist": "BEARWOLF",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "дофамин prod by philadelphia76\u001fyungmeechy": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Дофамин (prod. by Philadelphia76)",
+      "artist": "YungMeechy",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "move your body djs from mars club remix\u001feiffel 65": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Move Your Body (Djs From Mars Club Remix)",
+      "artist": "Eiffel 65",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "мои слезы\u001fсвета": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Мои слёзы",
+      "artist": "Sveta",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "санта лючия\u001fgayazov brother": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Санта Лючия",
+      "artist": "GAYAZOV$ BROTHER$",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "gaz\u001fzivert": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "GAZ",
+      "artist": "Zivert",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "loser mixed\u001ftame impala": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "Loser (Mixed)",
+      "artist": "Tame Impala",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "call me baby if you don t know my name\u001fdavid tavare": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Call Me Baby (If You Don’t Know My Name) [feat. Ruth]",
+      "artist": "David Tavaré",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "i got u\u001ftoxi": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "I GOT U",
+      "artist": "Toxi$",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "meet me in the dark\u001fave": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Meet Me In The Dark",
+      "artist": "AVE",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "земляк\u001fkoss|плутто": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Земляк",
+      "artist": "Koss & ПЛУТТО",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "digidi digidi\u001fdj ilham": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "DIGIDI DIGIDI",
+      "artist": "DJ.ILHAM",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "богиня моря\u001fфара ночи": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Богиня моря",
+      "artist": "Фара Ночи",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "мама хадижат\u001fвахид аюбов": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Мама Хадижат",
+      "artist": "Вахид Аюбов",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "лампочки\u001fartik|asti": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Лампочки",
+      "artist": "ARTIK & ASTI",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "let me be\u001fthe second voice": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "LET ME BE",
+      "artist": "The Second Voice",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "joseph\u001fcorey taylor|falling in reverse|serj tankian": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Joseph",
+      "artist": "Falling In Reverse, Corey Taylor & Serj Tankian",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "три солнца\u001fю питер": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Три солнца",
+      "artist": "U-Piter",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "bizarre\u001fmadonna|martin garrix": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Bizarre",
+      "artist": "Madonna & Martin Garrix",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "dai dai\u001fburna boy|shakira": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Dai Dai",
+      "artist": "Shakira & Burna Boy",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "любовная\u001fakmal": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Любовная",
+      "artist": "Akmal'",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "raya slowed\u001fzericxxn": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Raya (Slowed)",
+      "artist": "Zericxxn",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "пьяныи\u001fкатрин штоль": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Пьяный",
+      "artist": "Катрин Штоль",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "воин и дракон из к с ониксовыи шторм\u001fmona": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Воин и дракон (Из к/с «Ониксовый шторм»)",
+      "artist": "MONA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "alors on danse\u001fstromae": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Alors on danse (feat. Erik Hassle)",
+      "artist": "Stromae",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "возраст это просто пин код\u001fалександра чистякова|лилия ваин|марго нуар": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Возраст - это просто пин-код",
+      "artist": "Марго Нуар, Александра Чистякова & Лилия Вайн",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "шадэ\u001fby индия|xcho|мот": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Шадэ",
+      "artist": "By Индия, Xcho & МОТ",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "training season live from the royal albert hall\u001fdua lipa": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Training Season (Live from the Royal Albert Hall)",
+      "artist": "Dua Lipa",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "мы\u001fiowa": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "МЫ",
+      "artist": "IOWA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "танцуи club mix\u001fтимур timbigfamily": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Танцуй (Club Mix)",
+      "artist": "Timur Timbigfamily",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "я тебя могну\u001fцуефа": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Я ТЕБЯ МОГНУ (feat. Вирсавия, Милана Некрасова, LIZOGUB & Давид Туров)",
+      "artist": "ЦУЕФА",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "summer 2011\u001fsouthside club": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Summer 2011",
+      "artist": "SOUTHSIDE CLUB",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "talk to you\u001f54 ultra|anotr": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Talk To You (ft. 54 Ultra)",
+      "artist": "ANOTR & 54 Ultra",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "storm ii\u001fgener8ion|yung lean": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "STORM II",
+      "artist": "GENER8ION & Yung Lean",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "mafia style\u001ftrap mafia house": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Mafia Style",
+      "artist": "TRAP MAFIA HOUSE",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "спектакль\u001fby индия": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "спектакль",
+      "artist": "By Индия",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "линии\u001fruna": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Линии",
+      "artist": "RUNA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "go\u001fthe chemical brothers": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Go",
+      "artist": "The Chemical Brothers",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "танцуи пока молодои рэп версия\u001fне будите спящих": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Танцуй пока молодой (рэп версия)",
+      "artist": "Ne Budite Spyashchikh",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "move your body gabry ponte radio edit\u001feiffel 65": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Move Your Body (Gabry Ponte Radio Edit)",
+      "artist": "Eiffel 65",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "я тебя забыла\u001fa miri|har": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Я тебя забыла",
+      "artist": "HAR & A’MIRI",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "fear of death\u001fdj saad official": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Fear of Death",
+      "artist": "DJ Saad Official",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "глубина\u001fсергеи бобунец": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Глубина",
+      "artist": "Sergey Bobunets",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "dive into me\u001falok|khalid": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Dive Into Me",
+      "artist": "Alok & Khalid",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "mi chico jason derulo x melody version\u001fdj goja|jason derulo|melody": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Mi Chico (Jason Derulo x Melody Version)",
+      "artist": "DJ Goja, Jason Derulo & Melody",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "отражение\u001fваня дмитриенко|мальбэк|сюзанна": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Отражение",
+      "artist": "Ваня Дмитриенко, Мальбэк & Сюзанна",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "не буди меня\u001fфара ночи": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Не буди меня",
+      "artist": "Фара Ночи",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "andy warhol\u001fkai angel": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "andy warhol",
+      "artist": "Kai Angel",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "vibin\u001fwxoda": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Vibin",
+      "artist": "Wxoda",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "mr know it all\u001fteddy swims": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Mr. Know It All",
+      "artist": "Teddy Swims",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "бизи\u001fida galich|police in paris": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "БИЗИ",
+      "artist": "Police in Paris & Ida Galich",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "черри леди\u001fкоста лакоста": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "Черри Леди",
+      "artist": "Коста Лакоста",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "жизнь и смерть\u001fпотомучто": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Жизнь и смерть",
+      "artist": "Потомучто",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "даваи на самыи верх\u001fdirectoreels|zivert|эвер": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Давай на самый верх",
+      "artist": "Zivert, Эвер & directoreels",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "мальборо\u001fsayan": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Мальборо",
+      "artist": "SAYAN",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "oohc slowed\u001fkanatbek": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Oohc (Slowed)",
+      "artist": "Kanatbek",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "экспонат\u001fmia boyka": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "ЭКСПОНАТ",
+      "artist": "MIA BOYKA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "омут\u001fyasmi|полка": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Омут",
+      "artist": "Полка & YASMI",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "до старости вместе\u001fyamia": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "До старости вместе",
+      "artist": "Yamia",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "шепот робкое дыхание\u001ftatitera": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Шепот, Робкое Дыхание",
+      "artist": "TATITERA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "шепот робкое дыхание ver 3 0\u001ftatitera": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Шепот, Робкое Дыхание, Ver 3.0",
+      "artist": "TATITERA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "нежность\u001fhollyflame": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Нежность",
+      "artist": "HOLLYFLAME",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "никому не верю\u001fян разум": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "НИКОМУ НЕ ВЕРЮ",
+      "artist": "ЯН РАЗУМ",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "мысли\u001fтима белорусских": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Мысли",
+      "artist": "Тима Белорусских",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "эпилог\u001fanna asti|дима билан": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "Эпилог",
+      "artist": "ANNA ASTI & Дима Билан",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "magnetic\u001fthe bausa": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Magnetic",
+      "artist": "The Bausa",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "наследство\u001ficegergert|sky rae": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Наследство",
+      "artist": "Icegergert & SKY RAE",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "среди счастливых людеи\u001ffilatov|karas": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Среди Счастливых Людей",
+      "artist": "Filatov & Karas",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "i got love\u001fmiyagi|эндшпиль": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "I Got Love (feat. Рем Дигга)",
+      "artist": "Miyagi & Эндшпиль",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "wicked game\u001fchris isaak": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Wicked Game",
+      "artist": "Chris Isaak",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "уходи\u001fdj biakoff": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Уходи",
+      "artist": "DJ BiakOff",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "music sounds\u001ffast boy": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Music Sounds",
+      "artist": "FAST BOY",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "slow down can t stop thinking\u001fdivag": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Slow Down (Can't Stop Thinking)",
+      "artist": "DÏVÄG",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "вчера cover\u001fева власова": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Вчера (Cover)",
+      "artist": "Ева Власова",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "tuesday\u001fburak yeter": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Tuesday (feat. Danelle Sandoval)",
+      "artist": "Burak Yeter",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "суета\u001fвася в кедах": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Суета",
+      "artist": "Вася в Кедах",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "горгона\u001fлюся чеботина": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "ГОРГОНА",
+      "artist": "Люся Чеботина",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "погружение\u001fhorus": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Погружение (feat. Oxxxymiron)",
+      "artist": "Horus",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "homay\u001fay yola": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Homay",
+      "artist": "AY YOLA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "what if\u001fneptunica": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "What If?",
+      "artist": "Neptunica",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "тону\u001fhollyflame": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Тону",
+      "artist": "HOLLYFLAME",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "целоваться\u001flightprey": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "целоваться",
+      "artist": "lightprey",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "dance\u001fslayyyter": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "DANCE...",
+      "artist": "Slayyyter",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "револьвер\u001fdj zup raiii": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "револьвер",
+      "artist": "DJ ZUP RAIii",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "stereo love\u001fedward maya|vika jigulina": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Stereo Love",
+      "artist": "Edward Maya & Vika Jigulina",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "timberlake\u001fj vad": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Timberlake",
+      "artist": "J-VAD",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "кукла\u001fдискотека авария": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "КУКЛА (feat. VONAMOUR) [Remix 2026]",
+      "artist": "Diskoteka Avariya",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "ее формы как бомба\u001fgg brodyaga|vorskiy": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Её формы как бомба",
+      "artist": "VORSKIY & GG brodyaga",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "dracula\u001ftame impala": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Dracula",
+      "artist": "Tame Impala",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "самолеты\u001fженя трофимов": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Самолеты",
+      "artist": "Женя Трофимов",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "ча ща\u001fthe limba": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Ча Ща",
+      "artist": "The Limba",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "sad girls\u001fbebe rexha|david guetta": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Sad Girls",
+      "artist": "Bebe Rexha & David Guetta",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "феникс dj nejtrino remix\u001fbearwolf": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Феникс (DJ Nejtrino Remix)",
+      "artist": "BEARWOLF",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "baby my type\u001ftaketake": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "baby my type",
+      "artist": "TAKETAKE",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "what is love 7 mix\u001fhaddaway": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "What Is Love (7 Mix)\"",
+      "artist": "Haddaway",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "где ты\u001fremixoviy": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Где ты",
+      "artist": "Remixoviy",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "gobble glitch blackgrass glitch mix\u001fbackwoodz808": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Gobble Glitch (Blackgrass Glitch Mix)",
+      "artist": "Backwoodz808",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "5 минут назад\u001fchepikk": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "5 минут назад",
+      "artist": "CHEPIKK",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "alone\u001fedgars bukovskis": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Alone",
+      "artist": "Edgars Bukovskis",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "in and out of love\u001farmin van buuren": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "In and Out of Love (feat. Sharon den Adel)",
+      "artist": "Armin van Buuren",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "animal\u001fkatseye": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Animal",
+      "artist": "KATSEYE",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "careless whisper\u001fgeorge michael": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Careless Whisper",
+      "artist": "George Michael",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "жизнь бумеранг\u001ftatitera": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Жизнь бумеранг",
+      "artist": "TATITERA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "светлое чувство\u001fsettlers": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Светлое чувство",
+      "artist": "Settlers",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "dracula with jennie\u001ftame impala": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Dracula (with JENNIE)",
+      "artist": "Tame Impala",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "we are the people\u001fempire of the sun": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "We Are The People",
+      "artist": "Empire Of The Sun",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "ты лети\u001fbuinagolovushka": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Ты лети",
+      "artist": "BUINAGOLOVUSHKA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "krunk\u001fsad night dynamite": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Krunk",
+      "artist": "Sad Night Dynamite",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "think about the way\u001fice mc": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Think About the Way",
+      "artist": "Ice MC",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "фонари\u001fгород 312": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Фонари",
+      "artist": "Gorod 312",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "ненавидеть\u001fдавид туров|милена mibreoo": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Ненавидеть",
+      "artist": "МИЛЕНА MIBREOO & Давид Туров",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "первыи раз\u001fgataski": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "ПЕРВЫЙ РАЗ",
+      "artist": "GATASKI",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "roja nu\u001fhaps|hiva|paix": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Roja Nu",
+      "artist": "Hiva, Haps & PAIX",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "total eclipse of the heart\u001fbonnie tyler": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Total Eclipse of the Heart",
+      "artist": "Bonnie Tyler",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "carte blanche first version\u001fazar strato": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Carte blanche (first version)",
+      "artist": "Azar Strato",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "i just died in your arms\u001fcutting crew": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "(I Just) Died In Your Arms",
+      "artist": "Cutting Crew",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "babydoll\u001fdominic fike": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Babydoll",
+      "artist": "Dominic Fike",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "банк\u001ficegergert|zivert": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "БАНК",
+      "artist": "Icegergert & Zivert",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "лучшее для меня\u001fliza boyka|mia boyka": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Лучшее Для Меня",
+      "artist": "LIZA BOYKA & MIA BOYKA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "туда\u001fджуманджи|михеи": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "Туда (feat. Инна Стил)",
+      "artist": "Михей & Джуманджи",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "smells like teen spirit\u001fnirvana": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Smells Like Teen Spirit",
+      "artist": "Nirvana",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "под шуфутинского\u001fтаня л": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Под Шуфутинского",
+      "artist": "Таня. Л",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "tiburon\u001fproyecto uno": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Tiburon",
+      "artist": "Proyecto Uno",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "real love\u001fdion ora": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Real Love",
+      "artist": "Dion Ora",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "starburster\u001ffontaines d c": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Starburster",
+      "artist": "Fontaines D.C.",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "billie jean\u001fmichael jackson": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Billie Jean",
+      "artist": "Michael Jackson",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "замкнутыи круг\u001fjeny vesna": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Замкнутый круг",
+      "artist": "Jeny Vesna",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "пьяная без вина 2 0\u001fbarabanov|mirolybova": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Пьяная без вина 2.0",
+      "artist": "MIROLYBOVA & BARABANOV",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "тебя дороже нет\u001feverst": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Тебя дороже нет",
+      "artist": "Everst",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "санта муэрте\u001fноггано": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Санта Муэрте",
+      "artist": "Noggano",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "haha\u001fbolis pupul|charlotte adigery": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "HAHA",
+      "artist": "Charlotte Adigéry & Bolis Pupul",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "это лето будет нашим remix\u001fberezhno": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "ЭТО ЛЕТО БУДЕТ НАШИМ (REMIX)",
+      "artist": "BEREZHNO",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "socada violenta\u001fdanntz|dj huncher|mc dobella": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Socada Violenta (feat. MC FABINHO DA OSK & Mc Luan)",
+      "artist": "Danntz!, DJ HUNCHER & Mc Dobella",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "бриллиант\u001fseville": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Бриллиант",
+      "artist": "SEVILLE",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "ты помнишь\u001fмари краимбрери": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Ты помнишь",
+      "artist": "Mari Kraymbreri",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "stayin alive\u001fbee gees": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Stayin' Alive",
+      "artist": "Bee Gees",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "8901\u001fdimma urih|seryabkina": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "8901",
+      "artist": "SERYABKINA & Dimma Urih",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "montagem guerreiro slowed\u001favenxir|sunji": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "MONTAGEM GUERREIRO (Slowed)",
+      "artist": "Avenxir & SUNJI",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "tamam\u001fyg imma": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "TAMAM",
+      "artist": "YG IMMA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "танцуя лечусь\u001fm r x|соня белькевич": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Танцуя лечусь",
+      "artist": "Соня Белькевич & M.r-X",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "to gucci forema\u001fgiorgos mazonakis": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "To Gucci Forema",
+      "artist": "Giorgos Mazonakis",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "her boyfriend slowed\u001felaraaa": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "her boyfriend (slowed)",
+      "artist": "Elaraaa",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "вены реки\u001fанастасия стоцкая": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Вены-реки",
+      "artist": "Анастасия Стоцкая",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "в сигаретном дыму\u001fбаста|гуф": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "В сигаретном дыму",
+      "artist": "Баста & Гуф",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "с неба\u001felman": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "С неба (feat. TRIDA)",
+      "artist": "ELMAN",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "flying bird\u001fboris brejcha": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Flying Bird",
+      "artist": "Boris Brejcha",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "no batidao\u001fslxughter|zxkai": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "NO BATIDÃO",
+      "artist": "ZXKAI & slxughter",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "смотри на звезды если тебе больно\u001fтихон": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Смотри на Звёзды, если тебе больно",
+      "artist": "ТИХОН",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "ветер\u001fbrainstorm": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Ветер",
+      "artist": "BrainStorm",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "somebody that i used to know\u001fgotye": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Somebody That I Used to Know (feat. Kimbra)",
+      "artist": "Gotye",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "евродэнс ru\u001ficegergert": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Евродэнс.ru",
+      "artist": "Icegergert",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "love is gonna save us\u001fbenny benassi": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Love Is Gonna Save Us",
+      "artist": "Benny Benassi",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "bada bing bada boom remix\u001fjose yanque music": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Bada Bing bada boom remix",
+      "artist": "Jose Yanque music",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "shape of my heart my songs version\u001fsting": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "Shape of My Heart (My Songs Version)",
+      "artist": "Sting",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "kehribar\u001fburak bulut|ebru yasar": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Kehribar",
+      "artist": "Burak Bulut & Ebru Yaşar",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "аи\u001fхаски": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "Ай",
+      "artist": "Хаски",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "аутентичная\u001flyriq": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Аутентичная",
+      "artist": "LYRIQ",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "sonne\u001frammstein": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Sonne",
+      "artist": "Rammstein",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "мальвина\u001fkhalif": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Мальвина",
+      "artist": "KhaliF",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "дофамин slowed\u001fyungmeechy": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Дофамин (slowed)",
+      "artist": "YungMeechy",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "ловлю\u001fdose|hollyflame|iowa": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Ловлю",
+      "artist": "HOLLYFLAME, IOWA & Dose",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "пожар\u001fakmal|jalagonia": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Пожар",
+      "artist": "Akmal' & JALAGONIA",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "хулиган\u001fbalandin|pritulenko": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Хулиган",
+      "artist": "BALANDIN & Pritulenko",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "а мне все же классно\u001f132 и меридиан": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "А мне всё же классно",
+      "artist": "132-й меридиан",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "bring me to life\u001fevanescence": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Bring Me To Life",
+      "artist": "Evanescence",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "сыпь гармоника first take master\u001fсдп": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Сыпь, гармоника! (First Take Master)",
+      "artist": "СДП",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "gangsta s paradise\u001fcoolio|l v": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Gangsta's Paradise",
+      "artist": "Coolio & L.V.",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "amathole\u001fjoezi|lizwi": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Amathole",
+      "artist": "Joezi & Lizwi",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "валькирия\u001fbearwolf": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Валькирия",
+      "artist": "BEARWOLF",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "ana al ghaltane\u001fcheb rezki": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Ana Al Ghaltane",
+      "artist": "Cheb Rezki",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "niente regole\u001fmarco": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Niente Regole",
+      "artist": "Marco",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "сердце на костре\u001fзаинаб махаева": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Сердце на костре",
+      "artist": "Zainab Makhaeva",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "ibiza circoloco yann hendriksen remix\u001fdagi|dhali": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Ibiza, Circoloco (Yann Hendriksen Remix)",
+      "artist": "DHALI & Dagi",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "t pain\u001fbas|pete": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "T Pain",
+      "artist": "Pete & Bas",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "montagem dauntless super slowed\u001fmarjan|mxnvra": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "MONTAGEM DAUNTLESS (Super Slowed)",
+      "artist": "MarJan & Mxnvra",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "matrix bl studio loop\u001fchrmbchrmb": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "matrix (bl studio loop)",
+      "artist": "chrmbchrmb",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "addiction\u001fasenssia|lonown": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "addiction",
+      "artist": "LONOWN & Asenssia",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "весь этот мир\u001fnemiga|дорогои дневник": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Весь этот мир",
+      "artist": "NEMIGA & Дорогой Дневник",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "desert rose\u001fsting": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Desert Rose (feat. Cheb Mami)",
+      "artist": "Sting",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "stressed out\u001ftwenty one pilots": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Stressed Out",
+      "artist": "twenty one pilots",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "house every weekend radio edit\u001fdavid zowie": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "House Every Weekend (Radio Edit)",
+      "artist": "David Zowie",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "колыбельная ost на деревню дедушке 2\u001fфедор добронравов|юрии стоянов": {
+      "status": "baseline",
+      "source": "Apple Music — Shazam Charts Russia",
+      "title": "Колыбельная (OST «На деревню дедушке 2»)",
+      "artist": "Юрий Стоянов & Фёдор Добронравов",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "гиперпространство\u001fatlantida project": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Гиперпространство",
+      "artist": "Atlantida Project",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "sing\u001ftravis": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Sing",
+      "artist": "Travis",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "sign of the times\u001fharry styles": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Sign of the Times",
+      "artist": "Harry Styles",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "die with a smile\u001fbruno mars|lady gaga": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Die With A Smile",
+      "artist": "Lady Gaga & Bruno Mars",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Apple Music — Shazam Charts Russia"
+    },
+    "если я буду танцевать\u001fbasta|moya mishel": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Если я буду танцевать",
+      "artist": "Basta & Moya Mishel",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    },
+    "знак\u001fdora|toxi": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "ЗНАК",
+      "artist": "Toxi$ & Dora",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    },
+    "loser\u001ftame impala": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Loser",
+      "artist": "Tame Impala",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    },
+    "dubi dubi dam dam\u001fblackx|prod nifo": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Dubi Dubi Dam Dam",
+      "artist": "Prod Nifo & BLACKX",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    },
+    "черри леди\u001fcosta lacoste": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Черри Леди",
+      "artist": "Costa Lacoste",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    },
+    "эпилог\u001fanna asti|dima bilan": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Эпилог",
+      "artist": "ANNA ASTI & Dima Bilan",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    },
+    "туда\u001fjumanji|mihey": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Туда (feat. Инна Стил)",
+      "artist": "Mihey & Jumanji",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    },
+    "в сигаретном дыму\u001fbasta|guf": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "В сигаретном дыму",
+      "artist": "Basta & Guf",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    },
+    "shape of my heart\u001fsting": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Shape Of My Heart",
+      "artist": "Sting",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    },
+    "аи\u001fhusky": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Ай",
+      "artist": "Husky",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    },
+    "колыбельная ost на деревню дедушке 2\u001ffedor dobronravov|yuri stoyanov": {
+      "status": "baseline",
+      "source": "Shazam Top 200 Russia",
+      "title": "Колыбельная (OST «На деревню дедушке 2»)",
+      "artist": "Yuri Stoyanov & Fedor Dobronravov",
+      "at": "2026-09-21T13:53:25.407502Z",
+      "first_source": "Shazam Top 200 Russia"
+    }
+  }
 }
