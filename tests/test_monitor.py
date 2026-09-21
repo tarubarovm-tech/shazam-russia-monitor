@@ -672,7 +672,12 @@ class MonitorTests(unittest.TestCase):
         monitor.collect_apple_songs(payloads[0], out)
         self.assertEqual(
             monitor.merge_candidates(out),
-            [{"title": "Script Song", "artist": "Script Artist", "label": ""}],
+            [{
+                "title": "Script Song",
+                "artist": "Script Artist",
+                "label": "",
+                "apple_track_id": "3333333333",
+            }],
         )
 
 
