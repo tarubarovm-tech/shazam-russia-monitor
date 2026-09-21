@@ -1774,6 +1774,7 @@ def enrich_selected_spotify_links(state, selected, yandex_info, now_utc):
 
 def report_new_without_yandex(name, added, now, yandex_info=None):
     lines = [
+        "СЕМЕН ЖИР ШАЗ",
         f"🚨 {name}",
         f"Обнаружено: {now}",
         f"Новых треков, не найденных в Яндекс Музыке: {len(added)}",
