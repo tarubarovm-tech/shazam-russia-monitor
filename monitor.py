@@ -58,7 +58,24 @@ def text_id(value):
 
 
 def match_id(value):
-    return re.sub(r"[^\w]+", " ", text_id(value), flags=re.UNICODE).strip()
+    value = repair_text(value).casefold().replace("ё", "е")
+    value = unicodedata.normalize("NFKD", value)
+    value = "".join(ch for ch in value if not unicodedata.combining(ch))
+    return re.sub(r"[^\w]+", " ", value, flags=re.UNICODE).strip()
+
+
+_RU_LATIN = str.maketrans({
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e",
+    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l",
+    "м": "m", "н": "n", "о": "o", "п": "p", "р": "r", "с": "s",
+    "т": "t", "у": "u", "ф": "f", "х": "kh", "ц": "ts", "ч": "ch",
+    "ш": "sh", "щ": "shch", "ы": "y", "э": "e", "ю": "yu", "я": "ya",
+    "ь": "", "ъ": "",
+})
+
+
+def latinize_ru(value):
+    return match_id(value).translate(_RU_LATIN)
 
 
 def clean_track(title, artist="", label=""):
@@ -385,7 +402,9 @@ def similarity(a, b):
         return 0.0
     if a == b:
         return 1.0
-    return SequenceMatcher(None, a, b).ratio()
+    direct = SequenceMatcher(None, a, b).ratio()
+    translit = SequenceMatcher(None, latinize_ru(a), latinize_ru(b)).ratio()
+    return max(direct, translit)
 
 
 def artist_parts(value):
@@ -463,7 +482,9 @@ def yandex_candidate_quality(track, item):
     title_score = yandex_title_score(track.get("title", ""), candidate_title)
     artist_score = yandex_artist_score(track.get("artist", ""), candidate_artists)
 
-    if title_score >= 0.995 and artist_score >= 0.82:
+    if not repair_text(track.get("artist", "")) and title_score >= 0.995:
+        status = "uncertain"
+    elif title_score >= 0.995 and artist_score >= 0.82:
         status = "found"
     elif title_score >= 0.97 and artist_score >= 0.93:
         status = "found"
@@ -528,6 +549,7 @@ def yandex_queries(track):
     primary = parts[0] if parts else ""
     queries = [
         " ".join(x for x in (title, artist) if x),
+        " ".join(x for x in (artist, title) if x),
         " ".join(x for x in (title, primary) if x),
         title,
     ]
@@ -571,13 +593,14 @@ def check_yandex_track(track):
 
     if best_uncertain:
         return best_uncertain
-    if successful_queries:
+    planned_queries = len(yandex_queries(track))
+    if successful_queries == planned_queries:
         return {"status": "not_found", "score": 0.0, "url": ""}
     return {
         "status": "error",
         "score": 0.0,
         "url": "",
-        "error": "; ".join(errors[-2:]) or "Yandex Music search unavailable",
+        "error": "; ".join(errors[-2:]) or "Yandex Music search incomplete",
     }
 
 
