@@ -27,6 +27,7 @@ APPLE = "https://music.apple.com/ru/playlist/shazam-charts-russia/pl.b96cdf2da80
 ITUNES_SEARCH = "https://itunes.apple.com/search"
 ITUNES_LOOKUP = "https://itunes.apple.com/lookup"
 YANDEX_SEARCH = "https://api.music.yandex.net/search"
+YANDEX_PROXY_SEARCH = "https://yandex-music-cors-proxy.onrender.com/https://api.music.yandex.net:443/search"
 SCHEMA_VERSION = 4
 DUPLICATE_WINDOW_SECONDS = 6 * 60 * 60
 LABEL_CACHE_SECONDS = 30 * 24 * 60 * 60
@@ -513,7 +514,7 @@ def yandex_track_url(item):
 
 
 def yandex_search_results(query):
-    last_error = None
+    last_errors = []
     headers = dict(H)
     headers.update(
         {
@@ -522,34 +523,46 @@ def yandex_search_results(query):
             "Referer": "https://music.yandex.ru/",
         }
     )
-    for attempt in range(1, YANDEX_RETRIES + 1):
-        try:
-            response = get(
-                YANDEX_SEARCH,
-                params={
-                    "text": query,
-                    "page": 0,
-                    "type": "track",
-                    "nocorrect": "false",
-                    "perPage": 20,
-                },
-                headers=headers,
-                timeout=12,
-            )
-            data = response.json()
-            if not isinstance(data, dict):
-                raise ValueError("Yandex Music returned non-object JSON")
-            payload = data.get("result", data)
-            tracks = payload.get("tracks", {}) if isinstance(payload, dict) else {}
-            items = tracks.get("results", []) if isinstance(tracks, dict) else []
-            if not isinstance(items, list):
-                raise ValueError("Yandex Music returned an invalid tracks.results list")
-            return [item for item in items if isinstance(item, dict)]
-        except (requests.RequestException, ValueError) as exc:
-            last_error = exc
-            if attempt < YANDEX_RETRIES:
-                time.sleep(attempt)
-    raise RuntimeError(f"Yandex Music search failed: {last_error}")
+    params = {
+        "text": query,
+        "page": 0,
+        "type": "track",
+        "nocorrect": "false",
+        "perPage": 20,
+    }
+
+    for endpoint in (YANDEX_SEARCH, YANDEX_PROXY_SEARCH):
+        for attempt in range(1, YANDEX_RETRIES + 1):
+            try:
+                response = get(
+                    endpoint,
+                    params=params,
+                    headers=headers,
+                    timeout=12,
+                )
+                data = response.json()
+                if not isinstance(data, dict):
+                    raise ValueError("Yandex Music returned non-object JSON")
+                payload = data.get("result", data)
+                tracks = payload.get("tracks", {}) if isinstance(payload, dict) else {}
+                items = tracks.get("results", []) if isinstance(tracks, dict) else []
+                if not isinstance(items, list):
+                    raise ValueError("Yandex Music returned an invalid tracks.results list")
+                return [item for item in items if isinstance(item, dict)]
+            except requests.HTTPError as exc:
+                last_errors.append(f"{endpoint}: HTTP {getattr(exc.response, 'status_code', '?')}")
+                status = getattr(exc.response, "status_code", None)
+                if status in {401, 403, 404, 451}:
+                    break
+                if attempt < YANDEX_RETRIES:
+                    time.sleep(attempt)
+            except (requests.RequestException, ValueError) as exc:
+                last_errors.append(f"{endpoint}: {exc}")
+                if attempt < YANDEX_RETRIES:
+                    time.sleep(attempt)
+
+    detail = "; ".join(last_errors[-4:]) or "no response"
+    raise RuntimeError(f"Yandex Music search failed: {detail}")
 
 
 def yandex_queries(track):
