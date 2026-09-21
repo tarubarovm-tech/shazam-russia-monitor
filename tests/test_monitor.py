@@ -802,7 +802,7 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(len(result["evidence"]), 3)
         self.assertEqual(result["distributor"], "Small Distributor")
 
-    def test_musicfetch_mismatch_never_creates_missing_status(self):
+    def test_musicfetch_score_mismatch_creates_missing_candidate(self):
         track = {"title": "Expected Song", "artist": "Expected Artist", "label": ""}
         wrong = {
             "type": "track",
@@ -820,7 +820,8 @@ class MonitorTests(unittest.TestCase):
                 track,
                 "https://music.apple.com/ru/album/song/1?i=2",
             )
-        self.assertEqual(result["status"], "not_confirmed")
+        self.assertEqual(result["status"], "verified_missing")
+        self.assertEqual(result["verification"], "musicfetch_url_score_mismatch")
 
     def test_musicfetch_missing_token_never_creates_missing_status(self):
         track = {"title": "Song", "artist": "Artist", "label": ""}
@@ -1158,6 +1159,62 @@ class MonitorTests(unittest.TestCase):
             monitor.track_registry_status(state, new_track),
             "yandex_found",
         )
+
+
+    def test_title_above_80_artist_below_80_is_missing_candidate(self):
+        track = {"title": "Apple Song", "artist": "Apple Artist", "label": ""}
+        result = {
+            "type": "track",
+            "name": "Yandex Song",
+            "artists": [{"name": "Yandex Artist"}],
+        }
+        scores = [
+            {"text": 0.95, "latin": 0.20, "best": 0.95},
+            {"text": 0.95, "latin": 0.20, "best": 0.95},
+            {"text": 0.79, "latin": 0.20, "best": 0.79},
+            {"text": 0.79, "latin": 0.20, "best": 0.79},
+        ]
+        with patch.object(monitor, "similarity_channels", side_effect=scores):
+            quality = monitor.musicfetch_match_quality(track, result)
+        self.assertFalse(quality["matches"])
+        self.assertEqual(quality["title_score"], 0.95)
+        self.assertEqual(quality["artist_score"], 0.79)
+
+    def test_title_below_80_artist_above_80_is_missing_candidate(self):
+        track = {"title": "Apple Song", "artist": "Apple Artist", "label": ""}
+        result = {
+            "type": "track",
+            "name": "Yandex Song",
+            "artists": [{"name": "Yandex Artist"}],
+        }
+        scores = [
+            {"text": 0.79, "latin": 0.20, "best": 0.79},
+            {"text": 0.79, "latin": 0.20, "best": 0.79},
+            {"text": 0.95, "latin": 0.20, "best": 0.95},
+            {"text": 0.95, "latin": 0.20, "best": 0.95},
+        ]
+        with patch.object(monitor, "similarity_channels", side_effect=scores):
+            quality = monitor.musicfetch_match_quality(track, result)
+        self.assertFalse(quality["matches"])
+        self.assertEqual(quality["title_score"], 0.79)
+        self.assertEqual(quality["artist_score"], 0.95)
+
+    def test_both_scores_at_least_80_reject_candidate(self):
+        track = {"title": "Apple Song", "artist": "Apple Artist", "label": ""}
+        result = {
+            "type": "track",
+            "name": "Yandex Song",
+            "artists": [{"name": "Yandex Artist"}],
+        }
+        scores = [
+            {"text": 0.80, "latin": 0.20, "best": 0.80},
+            {"text": 0.80, "latin": 0.20, "best": 0.80},
+            {"text": 0.80, "latin": 0.20, "best": 0.80},
+            {"text": 0.80, "latin": 0.20, "best": 0.80},
+        ]
+        with patch.object(monitor, "similarity_channels", side_effect=scores):
+            quality = monitor.musicfetch_match_quality(track, result)
+        self.assertTrue(quality["matches"])
 
 
 if __name__ == "__main__":
