@@ -1,0 +1,42 @@
+name: Private bot test
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Run real monitor to private chat
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          MUSICFETCH_TOKEN: ${{ secrets.MUSICFETCH_TOKEN }}
+        run: python monitor.py
+      - name: Send completion marker
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          python - <<'PY'
+          import os, requests
+          r = requests.post(
+              f"https://api.telegram.org/bot{os.environ['BOT_TOKEN']}/sendMessage",
+              data={
+                  "chat_id": os.environ["CHAT_ID"],
+                  "text": "✅ Тест бота завершён. Это был реальный прогон текущей логики.",
+                  "disable_web_page_preview": "true",
+              },
+              timeout=30,
+          )
+          r.raise_for_status()
+          PY
