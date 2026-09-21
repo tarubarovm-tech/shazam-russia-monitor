@@ -1267,5 +1267,45 @@ class MonitorTests(unittest.TestCase):
                 )
 
 
+    def test_extract_spotify_urls_from_songlink_page(self):
+        page = (
+            '<a href="https:\\/\\/open.spotify.com\\/track\\/ABC123xyz?si=token">'
+            'Spotify</a>'
+        )
+        self.assertEqual(
+            monitor.extract_spotify_urls(page),
+            ["https://open.spotify.com/track/ABC123xyz?si=token"],
+        )
+
+    def test_track_open_url_prefers_spotify_over_apple(self):
+        info = {
+            "spotify_url": "https://open.spotify.com/track/ABC123xyz",
+            "apple_url": "https://music.apple.com/ru/song/123",
+            "source_url": "https://song.link/i/123",
+        }
+        self.assertEqual(
+            monitor.track_open_url(info),
+            "https://open.spotify.com/track/ABC123xyz",
+        )
+
+    def test_fetch_spotify_link_for_final_track_uses_songlink(self):
+        track = {"title": "Song", "artist": "Artist", "label": "Small Label"}
+        info = {
+            "source_url": "https://song.link/i/123",
+            "apple_url": "https://music.apple.com/ru/song/123",
+        }
+        response = Mock()
+        response.text = (
+            "<html>Song Artist "
+            "https://open.spotify.com/track/ABC123xyz</html>"
+        )
+        with patch.object(monitor, "get", return_value=response):
+            enriched = monitor.fetch_spotify_link_for_track(track, info)
+        self.assertEqual(
+            enriched["spotify_url"],
+            "https://open.spotify.com/track/ABC123xyz",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
