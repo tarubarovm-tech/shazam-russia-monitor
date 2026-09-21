@@ -1084,6 +1084,7 @@ class MonitorTests(unittest.TestCase):
             {"text": 0.95, "latin": 0.20, "best": 0.95},
             {"text": 0.95, "latin": 0.20, "best": 0.95},
             {"text": 0.84, "latin": 0.20, "best": 0.84},
+            {"text": 0.84, "latin": 0.20, "best": 0.84},
         ]
         with patch.object(monitor, "similarity_channels", side_effect=scores):
             quality = monitor.musicfetch_match_quality(track, result)
