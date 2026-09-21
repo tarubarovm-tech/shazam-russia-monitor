@@ -26,18 +26,18 @@ SHAZAM = "https://www.shazam.com/services/charts/csv/top-200/russia/"
 APPLE = "https://music.apple.com/ru/playlist/shazam-charts-russia/pl.b96cdf2da806490ea383b8a0cb45790d"
 ITUNES_SEARCH = "https://itunes.apple.com/search"
 ITUNES_LOOKUP = "https://itunes.apple.com/lookup"
-YANDEX_SEARCH = "https://api.music.yandex.net/search"
-YANDEX_PROXY_SEARCH = "https://yandex-music-cors-proxy.onrender.com/https://api.music.yandex.net:443/search"
-SCHEMA_VERSION = 4
+SONGLINK_TRACK = "https://song.link/i/{track_id}"
+SCHEMA_VERSION = 5
 DUPLICATE_WINDOW_SECONDS = 6 * 60 * 60
 LABEL_CACHE_SECONDS = 30 * 24 * 60 * 60
 YANDEX_CACHE_SECONDS = {
     "found": 24 * 60 * 60,
-    "not_found": 2 * 60 * 60,
+    "not_confirmed": 2 * 60 * 60,
     "uncertain": 30 * 60,
     "error": 10 * 60,
 }
-YANDEX_RETRIES = 3
+SONGLINK_RETRIES = 2
+_ITUNES_MATCH_MEMO = {}
 
 
 def repair_text(value):
@@ -91,7 +91,7 @@ def yandex_status_text(info):
     status = (info or {}).get("status")
     return {
         "found": "🟡 Яндекс: есть",
-        "not_found": "⚪ Яндекс: не найден",
+        "not_confirmed": "⚪ Яндекс: не подтверждён",
         "uncertain": "🟠 Яндекс: неоднозначно",
         "error": "⚠️ Яндекс: проверка недоступна",
     }.get(status, "⚠️ Яндекс: не проверен")
@@ -420,23 +420,7 @@ def artist_parts(value):
     return out
 
 
-def yandex_item_title(item):
-    title = repair_text(item.get("title", ""))
-    version = repair_text(item.get("version", ""))
-    if version and match_id(version) not in match_id(title):
-        return f"{title} ({version})"
-    return title
-
-
-def yandex_item_artists(item):
-    result = []
-    for artist in item.get("artists", []) if isinstance(item.get("artists"), list) else []:
-        if isinstance(artist, dict) and artist.get("name"):
-            result.append(repair_text(artist["name"]))
-    return result
-
-
-def yandex_title_score(expected, candidate):
+def title_match_score(expected, candidate):
     exact = similarity(expected, candidate)
     if match_id(expected) == match_id(candidate):
         return 1.0
@@ -447,7 +431,7 @@ def yandex_title_score(expected, candidate):
     return exact
 
 
-def yandex_artist_score(expected, actual_names):
+def artist_match_score(expected, actual_names):
     expected_parts = artist_parts(expected)
     actual = [match_id(x) for x in actual_names if match_id(x)]
     if not expected_parts or not actual:
@@ -477,11 +461,15 @@ def yandex_artist_score(expected, actual_names):
     )
 
 
-def yandex_candidate_quality(track, item):
-    candidate_title = yandex_item_title(item)
-    candidate_artists = yandex_item_artists(item)
-    title_score = yandex_title_score(track.get("title", ""), candidate_title)
-    artist_score = yandex_artist_score(track.get("artist", ""), candidate_artists)
+def itunes_candidate_quality(track, item):
+    title_score = title_match_score(
+        track.get("title", ""),
+        item.get("trackName", ""),
+    )
+    artist_score = artist_match_score(
+        track.get("artist", ""),
+        [item.get("artistName", "")],
+    )
 
     if not repair_text(track.get("artist", "")) and title_score >= 0.995:
         status = "uncertain"
@@ -499,158 +487,169 @@ def yandex_candidate_quality(track, item):
         "score": round(0.62 * title_score + 0.38 * artist_score, 4),
         "title_score": round(title_score, 4),
         "artist_score": round(artist_score, 4),
-        "matched_title": candidate_title,
-        "matched_artist": ", ".join(candidate_artists),
     }
 
 
-def yandex_track_url(item):
-    track_id = item.get("id")
-    albums = item.get("albums") if isinstance(item.get("albums"), list) else []
-    album_id = albums[0].get("id") if albums and isinstance(albums[0], dict) else None
-    if track_id and album_id:
-        return f"https://music.yandex.ru/album/{album_id}/track/{track_id}"
-    return ""
+def find_itunes_track(track):
+    key = cache_key(track)
+    if key in _ITUNES_MATCH_MEMO:
+        return _ITUNES_MATCH_MEMO[key]
 
-
-def yandex_search_results(query):
-    last_errors = []
-    headers = dict(H)
-    headers.update(
-        {
-            "Accept": "application/json",
-            "Origin": "https://music.yandex.ru",
-            "Referer": "https://music.yandex.ru/",
-        }
-    )
-    params = {
-        "text": query,
-        "page": 0,
-        "type": "track",
-        "nocorrect": "false",
-        "perPage": 20,
-    }
-
-    for endpoint in (YANDEX_SEARCH, YANDEX_PROXY_SEARCH):
-        for attempt in range(1, YANDEX_RETRIES + 1):
-            try:
-                response = get(
-                    endpoint,
-                    params=params,
-                    headers=headers,
-                    timeout=12,
-                )
-                data = response.json()
-                if not isinstance(data, dict):
-                    raise ValueError("Yandex Music returned non-object JSON")
-                payload = data.get("result", data)
-                tracks = payload.get("tracks", {}) if isinstance(payload, dict) else {}
-                items = tracks.get("results", []) if isinstance(tracks, dict) else []
-                if not isinstance(items, list):
-                    raise ValueError("Yandex Music returned an invalid tracks.results list")
-                return [item for item in items if isinstance(item, dict)]
-            except requests.HTTPError as exc:
-                last_errors.append(f"{endpoint}: HTTP {getattr(exc.response, 'status_code', '?')}")
-                status = getattr(exc.response, "status_code", None)
-                if status in {401, 403, 404, 451}:
-                    break
-                if attempt < YANDEX_RETRIES:
-                    time.sleep(attempt)
-            except (requests.RequestException, ValueError) as exc:
-                last_errors.append(f"{endpoint}: {exc}")
-                if attempt < YANDEX_RETRIES:
-                    time.sleep(attempt)
-
-    detail = "; ".join(last_errors[-4:]) or "no response"
-    raise RuntimeError(f"Yandex Music search failed: {detail}")
-
-
-def yandex_queries(track):
     title = repair_text(track.get("title", ""))
     artist = repair_text(track.get("artist", ""))
-    parts = artist_parts(artist)
-    primary = parts[0] if parts else ""
-    queries = [
-        " ".join(x for x in (title, artist) if x),
-        " ".join(x for x in (artist, title) if x),
-        " ".join(x for x in (title, primary) if x),
-        title,
-    ]
-    out = []
-    for query in queries:
-        query = query.strip()
-        if query and query not in out:
-            out.append(query)
-    return out
-
-
-def check_yandex_track(track):
-    best_uncertain = None
-    successful_queries = 0
-    errors = []
-    seen = set()
-
-    for query in yandex_queries(track):
-        try:
-            items = yandex_search_results(query)
-            successful_queries += 1
-        except Exception as exc:
-            errors.append(str(exc))
-            continue
-
-        for item in items:
-            identity = str(item.get("id") or "") + "|" + yandex_item_title(item)
-            if identity in seen:
-                continue
-            seen.add(identity)
-            quality = yandex_candidate_quality(track, item)
-            if quality["status"] == "reject":
-                continue
-
-            quality["url"] = yandex_track_url(item)
-            if quality["status"] == "found":
-                return quality
-
-            if best_uncertain is None or quality["score"] > best_uncertain["score"]:
-                best_uncertain = quality
-
-    if best_uncertain:
-        return best_uncertain
-    planned_queries = len(yandex_queries(track))
-    if successful_queries == planned_queries:
-        return {"status": "not_found", "score": 0.0, "url": ""}
-    return {
-        "status": "error",
-        "score": 0.0,
-        "url": "",
-        "error": "; ".join(errors[-2:]) or "Yandex Music search incomplete",
-    }
-
-
-def find_collection(track):
-    title = match_id(track.get("title", ""))
     if not title:
+        _ITUNES_MATCH_MEMO[key] = None
         return None
-    artist = track.get("artist", "")
-    term = " ".join(x for x in (track.get("title", ""), artist) if x)
+
+    term = " ".join(x for x in (title, artist) if x)
+    best = None
+    best_score = -1.0
+
     for country in ("ru", "us"):
         try:
             data = get(
                 ITUNES_SEARCH,
-                params={"term": term, "media": "music", "entity": "song", "country": country, "limit": 10},
+                params={
+                    "term": term,
+                    "media": "music",
+                    "entity": "song",
+                    "country": country,
+                    "limit": 15,
+                },
                 timeout=15,
             ).json()
         except (requests.RequestException, ValueError):
             continue
+
         for item in data.get("results", []):
-            if match_id(item.get("trackName", "")) != title:
+            if not isinstance(item, dict):
                 continue
-            if not artist_matches(artist, item.get("artistName", "")):
+            quality = itunes_candidate_quality(track, item)
+            if quality["status"] == "reject":
                 continue
-            collection_id = item.get("collectionId")
-            if collection_id:
-                return str(collection_id), country
-    return None
+            score = quality["score"]
+            candidate = {
+                "item": item,
+                "country": country,
+                "quality": quality,
+            }
+            if quality["status"] == "found" and score > best_score:
+                best = candidate
+                best_score = score
+
+    _ITUNES_MATCH_MEMO[key] = best
+    return best
+
+
+def find_collection(track):
+    match = find_itunes_track(track)
+    if not match:
+        return None
+    item = match["item"]
+    collection_id = item.get("collectionId")
+    if not collection_id:
+        return None
+    return str(collection_id), match["country"]
+
+
+def extract_yandex_urls(page):
+    text = html_lib.unescape(str(page or "")).replace("\\/", "/")
+    urls = []
+    pattern = (
+        r"https?://music\.yandex\.(?:ru|com)/"
+        r"(?:album/\d+/track/\d+|track/\d+)"
+        r"[^\"'<>\\s]*"
+    )
+    for url in re.findall(pattern, text, flags=re.I):
+        url = url.rstrip(".,);]")
+        if url not in urls:
+            urls.append(url)
+    return urls
+
+
+def songlink_title_matches(track, page):
+    title = match_id(track.get("title", ""))
+    if not title:
+        return False
+    text = match_id(html_lib.unescape(str(page or "")))
+    return title in text or title_core(track.get("title", "")) in text
+
+
+def check_yandex_track(track):
+    source = find_itunes_track(track)
+    if not source:
+        return {
+            "status": "uncertain",
+            "score": 0.0,
+            "url": "",
+            "error": "точный iTunes-источник не найден",
+        }
+
+    item = source["item"]
+    track_id = item.get("trackId")
+    if not track_id:
+        return {
+            "status": "uncertain",
+            "score": source["quality"]["score"],
+            "url": "",
+            "error": "у подтверждённого iTunes-трека нет trackId",
+        }
+
+    resolver_url = SONGLINK_TRACK.format(track_id=track_id)
+    last_error = None
+    for attempt in range(1, SONGLINK_RETRIES + 1):
+        try:
+            response = get(
+                resolver_url,
+                headers={
+                    "User-Agent": H["User-Agent"],
+                    "Accept-Language": H["Accept-Language"],
+                },
+                timeout=25,
+            )
+            page = response.text
+            if not songlink_title_matches(track, page):
+                return {
+                    "status": "uncertain",
+                    "score": source["quality"]["score"],
+                    "url": "",
+                    "source_url": resolver_url,
+                    "error": "Songlink не подтвердил название трека",
+                }
+
+            urls = extract_yandex_urls(page)
+            if urls:
+                return {
+                    "status": "found",
+                    "score": source["quality"]["score"],
+                    "url": urls[0],
+                    "source_url": resolver_url,
+                    "itunes_track_id": str(track_id),
+                    "matched_title": repair_text(item.get("trackName", "")),
+                    "matched_artist": repair_text(item.get("artistName", "")),
+                }
+
+            return {
+                "status": "not_confirmed",
+                "score": source["quality"]["score"],
+                "url": "",
+                "source_url": resolver_url,
+                "itunes_track_id": str(track_id),
+                "matched_title": repair_text(item.get("trackName", "")),
+                "matched_artist": repair_text(item.get("artistName", "")),
+            }
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < SONGLINK_RETRIES:
+                time.sleep(attempt)
+
+    return {
+        "status": "error",
+        "score": source["quality"]["score"],
+        "url": "",
+        "source_url": resolver_url,
+        "error": f"Songlink недоступен: {last_error}",
+    }
 
 
 def lookup_collection_labels(collections):
@@ -704,6 +703,8 @@ def store_yandex_cache(state, track, info, now_utc):
         "url": info.get("url", ""),
         "matched_title": info.get("matched_title", ""),
         "matched_artist": info.get("matched_artist", ""),
+        "source_url": info.get("source_url", ""),
+        "itunes_track_id": info.get("itunes_track_id", ""),
         "at": now_utc.isoformat().replace("+00:00", "Z"),
     }
     if info.get("error"):
