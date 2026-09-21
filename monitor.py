@@ -1592,21 +1592,62 @@ def track_open_url(info):
     return repair_text(info.get("apple_url", "")) or repair_text(info.get("source_url", ""))
 
 
-def report_new_without_yandex(name, added, now, yandex_info=None):
-    lines = [
-        f"🚨 {name}",
-        f"Обнаружено: {now}",
-        f"Новых треков, не найденных в Яндекс Музыке: {len(added)}",
-        "",
-        "🆕 НОВЫЕ:",
+def final_match_scores(info):
+    info = info or {}
+    url_match = info.get("url_match") or {}
+    isrc_match = info.get("isrc_match") or {}
+
+    title_scores = [
+        value
+        for value in (
+            url_match.get("title_score"),
+            isrc_match.get("title_score"),
+        )
+        if isinstance(value, (int, float))
     ]
+    artist_scores = [
+        value
+        for value in (
+            url_match.get("artist_score"),
+            isrc_match.get("artist_score"),
+        )
+        if isinstance(value, (int, float))
+    ]
+
+    title_score = min(title_scores) if title_scores else None
+    artist_score = min(artist_scores) if artist_scores else None
+    return title_score, artist_score
+
+
+def report_new_without_yandex(name, added, now, yandex_info=None):
+    lines = []
     for p, _, track in added:
         info = (yandex_info or {}).get(cache_key(track), {})
-        lines.append(f"#{p} {display_track(track, info)}")
+        title = repair_text(track.get("title", ""))
+        artist = repair_text(track.get("artist", ""))
+        label = repair_text(track.get("label", "")) or "не найден"
+        title_score, artist_score = final_match_scores(info)
+
+        lines += [
+            "✅ ПОДХОДЯЩИЙ ТРЕК",
+            f"#{p} {title}" + (f" — {artist}" if artist else ""),
+            f"🏷 Label: {label}",
+        ]
+
+        if title_score is not None or artist_score is not None:
+            title_text = f"{title_score:.2f}" if title_score is not None else "—"
+            artist_text = f"{artist_score:.2f}" if artist_score is not None else "—"
+            lines += [
+                f"Yandex match: title={title_text} · artist={artist_text}",
+            ]
+
         open_url = track_open_url(info)
         if open_url:
-            lines.append(f"🔗 Открыть трек: {open_url}")
-    return "\n".join(lines)
+            lines.append(f"🔗 {open_url}")
+
+        lines.append("")
+
+    return "\n".join(lines).rstrip()
 
 
 def parse_utc(value):

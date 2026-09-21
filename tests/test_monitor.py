@@ -251,7 +251,7 @@ class MonitorTests(unittest.TestCase):
             yandex_info,
         )
         self.assertIn("Missing — Artist", message)
-        self.assertIn("Яндекс: не найден", message)
+        self.assertIn("✅ ПОДХОДЯЩИЙ ТРЕК", message)
         self.assertNotIn("УШЛИ", message)
         self.assertNotIn("ИЗМЕНЕНИЯ ПОЗИЦИЙ", message)
 
@@ -291,7 +291,7 @@ class MonitorTests(unittest.TestCase):
             yandex_info,
         )
         self.assertIn(
-            "🔗 Открыть трек: https://music.apple.com/ru/song/song/123",
+            "🔗 https://music.apple.com/ru/song/song/123",
             message,
         )
 
@@ -1215,6 +1215,49 @@ class MonitorTests(unittest.TestCase):
         with patch.object(monitor, "similarity_channels", side_effect=scores):
             quality = monitor.musicfetch_match_quality(track, result)
         self.assertTrue(quality["matches"])
+
+
+    def test_final_alert_contains_only_filtered_track_details(self):
+        track = {
+            "title": "Indie Song",
+            "artist": "Indie Artist",
+            "label": "Small Label",
+        }
+        info = {
+            monitor.cache_key(track): {
+                "status": "verified_missing",
+                "apple_url": "https://music.apple.com/ru/song/123",
+                "url_match": {
+                    "title_score": 0.91,
+                    "artist_score": 0.73,
+                },
+            }
+        }
+        message = monitor.report_new_without_yandex(
+            "Apple Music — Shazam Charts Russia",
+            [(42, "indie-song", track)],
+            "21.09.2026 18:00 МСК",
+            info,
+        )
+        self.assertIn("✅ ПОДХОДЯЩИЙ ТРЕК", message)
+        self.assertIn("#42 Indie Song — Indie Artist", message)
+        self.assertIn("🏷 Label: Small Label", message)
+        self.assertIn("title=0.91", message)
+        self.assertIn("artist=0.73", message)
+        self.assertIn("https://music.apple.com/ru/song/123", message)
+        self.assertNotIn("Проверено", message)
+        self.assertNotIn("Найдено на Яндексе", message)
+        self.assertNotIn("uncertain", message)
+
+    def test_final_match_scores_use_lowest_verified_evidence(self):
+        info = {
+            "url_match": {"title_score": 0.95, "artist_score": 0.84},
+            "isrc_match": {"title_score": 0.93, "artist_score": 0.76},
+        }
+        self.assertEqual(
+            monitor.final_match_scores(info),
+            (0.93, 0.76),
+        )
 
 
 if __name__ == "__main__":
