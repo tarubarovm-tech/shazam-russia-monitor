@@ -1,3 +1,4 @@
+import base64
 import csv
 import hashlib
 import html as html_lib
@@ -12,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
+from urllib.parse import unquote
 from zoneinfo import ZoneInfo
 
 import requests
@@ -197,6 +199,74 @@ def label_from_node(node):
     return ""
 
 
+def _subtitle_artist(node):
+    links = node.get("subtitleLinks")
+    if isinstance(links, list):
+        names = []
+        for item in links:
+            if isinstance(item, dict) and item.get("title"):
+                name = repair_text(item["title"])
+                if name and name not in names:
+                    names.append(name)
+        if names:
+            return ", ".join(names)
+    subtitle = node.get("subtitle")
+    return repair_text(subtitle) if isinstance(subtitle, str) else ""
+
+
+def _flat_apple_track(node):
+    if not isinstance(node, dict):
+        return None
+
+    title = (
+        node.get("trackName")
+        or node.get("songName")
+        or node.get("title")
+        or ""
+    )
+    if not isinstance(title, str) or not title.strip():
+        return None
+
+    artist = (
+        node.get("artistName")
+        or node.get("artist_name")
+        or node.get("byline")
+        or _subtitle_artist(node)
+    )
+    if not isinstance(artist, str) or not artist.strip():
+        return None
+
+    descriptor = node.get("contentDescriptor")
+    identifiers = (
+        descriptor.get("identifiers")
+        if isinstance(descriptor, dict)
+        and isinstance(descriptor.get("identifiers"), dict)
+        else {}
+    )
+    store_id = repair_text(identifiers.get("storeAdamID", ""))
+    node_id = repair_text(node.get("id", ""))
+    play_params = node.get("playParams") if isinstance(node.get("playParams"), dict) else {}
+
+    song_like = bool(
+        store_id
+        or node_id.startswith("track-lockup")
+        or play_params.get("kind") == "song"
+        or node.get("kind") == "song"
+        or "duration" in node
+        or "durationInMillis" in node
+        or "trackTimeMillis" in node
+    )
+    if not song_like:
+        return None
+
+    label = (
+        label_name(node.get("recordLabel"))
+        or label_name(node.get("recordLabelName"))
+        or label_name(node.get("label"))
+    )
+    return clean_track(title, artist, label)
+
+
 def collect_apple_songs(node, out):
     if isinstance(node, dict):
         attrs = node.get("attributes")
@@ -215,6 +285,10 @@ def collect_apple_songs(node, out):
                         label_from_node(node),
                     )
                 )
+
+        flat_track = _flat_apple_track(node)
+        if flat_track:
+            out.append(flat_track)
 
         types = node.get("@type")
         if isinstance(types, str):
@@ -239,6 +313,88 @@ def collect_apple_songs(node, out):
     elif isinstance(node, list):
         for value in node:
             collect_apple_songs(value, out)
+
+
+def decode_apple_payload(raw):
+    raw = html_lib.unescape(str(raw or "")).strip()
+    if not raw:
+        return None
+
+    candidates = [raw]
+
+    decoded_url = unquote(raw)
+    if decoded_url != raw:
+        candidates.append(decoded_url)
+
+    compact = re.sub(r"\s+", "", raw)
+    if len(compact) >= 16 and re.fullmatch(r"[A-Za-z0-9+/=_-]+", compact):
+        try:
+            padded = compact + "=" * (-len(compact) % 4)
+            decoded = base64.b64decode(padded, validate=False).decode("utf-8")
+            candidates.append(decoded)
+        except (ValueError, UnicodeDecodeError):
+            pass
+
+    for candidate in list(candidates):
+        try:
+            data = json.loads(candidate)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if isinstance(data, str):
+            candidates.append(data)
+            continue
+        return data
+
+    for candidate in candidates:
+        starts = [p for p in (candidate.find("{"), candidate.find("[")) if p >= 0]
+        if not starts:
+            continue
+        start = min(starts)
+        ends = [p for p in (candidate.rfind("}"), candidate.rfind("]")) if p >= start]
+        if not ends:
+            continue
+        end = max(ends)
+        try:
+            return json.loads(candidate[start:end + 1])
+        except (json.JSONDecodeError, TypeError):
+            continue
+    return None
+
+
+def apple_embedded_payloads(page):
+    payloads = []
+
+    for raw in re.findall(r"<script\b[^>]*>(.*?)</script>", page, re.I | re.S):
+        if not re.search(
+            r'track-lockup|"songs"|"type"\s*:\s*"songs"|'
+            r'"trackName"|"songName"|"contentDescriptor"|"MusicRecording"',
+            raw,
+            re.I,
+        ):
+            continue
+        data = decode_apple_payload(raw)
+        if data is not None:
+            payloads.append(data)
+
+    for tag in re.findall(r"<meta\b[^>]*>", page, re.I | re.S):
+        if not re.search(
+            r'name\s*=\s*["\']serialized-server-data["\']',
+            tag,
+            re.I,
+        ):
+            continue
+        match = re.search(
+            r'content\s*=\s*(["\'])(.*?)\1',
+            tag,
+            re.I | re.S,
+        )
+        if not match:
+            continue
+        data = decode_apple_payload(match.group(2))
+        if data is not None:
+            payloads.append(data)
+
+    return payloads
 
 
 def merge_candidates(candidates):
@@ -289,12 +445,9 @@ def enrich_metadata(tracks, fallback):
 def apple(fallback=None):
     page = get(APPLE).content.decode("utf-8", errors="replace")
     candidates = []
-    pattern = r'<script[^>]+type=["\']application/(?:ld\+json|json)["\'][^>]*>(.*?)</script>'
-    for raw in re.findall(pattern, page, re.I | re.S):
-        try:
-            collect_apple_songs(json.loads(raw), candidates)
-        except (json.JSONDecodeError, TypeError):
-            continue
+
+    for payload in apple_embedded_payloads(page):
+        collect_apple_songs(payload, candidates)
 
     out = merge_candidates(candidates)
     out = enrich_metadata(out, fallback)
