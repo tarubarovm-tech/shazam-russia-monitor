@@ -6,6 +6,7 @@ import io
 import json
 import os
 import re
+import threading
 import time
 import unicodedata
 from collections import Counter
@@ -29,12 +30,17 @@ APPLE = "https://music.apple.com/ru/playlist/shazam-charts-russia/pl.b96cdf2da80
 ITUNES_SEARCH = "https://itunes.apple.com/search"
 ITUNES_LOOKUP = "https://itunes.apple.com/lookup"
 SONGLINK_TRACK = "https://song.link/i/{track_id}"
+MUSICFETCH_URL_LOOKUP = "https://api.musicfetch.io/url"
+MUSICFETCH_ISRC_LOOKUP = "https://api.musicfetch.io/isrc"
+MUSICFETCH_TIMEOUT = 30
+MUSICFETCH_MIN_INTERVAL = float(os.environ.get("MUSICFETCH_MIN_INTERVAL", "10.2"))
 SCHEMA_VERSION = 5
 DUPLICATE_WINDOW_SECONDS = 6 * 60 * 60
 LABEL_CACHE_SECONDS = 30 * 24 * 60 * 60
 YANDEX_CACHE_SECONDS = {
     "found": 24 * 60 * 60,
-    "not_confirmed": 2 * 60 * 60,
+    "not_confirmed": 30 * 60,
+    "verified_missing": 6 * 60 * 60,
     "uncertain": 30 * 60,
     "error": 10 * 60,
 }
@@ -43,6 +49,8 @@ ALERT_MODE = "apple_primary_shazam_fallback_v1"
 REPORT_YANDEX_STATUSES = {"verified_missing"}
 TERMINAL_TRACK_STATUSES = {"baseline", "alerted", "yandex_found", "major_label"}
 _ITUNES_MATCH_MEMO = {}
+_MUSICFETCH_LOCK = threading.Lock()
+_MUSICFETCH_LAST_REQUEST = 0.0
 
 
 def repair_text(value):
@@ -732,6 +740,198 @@ def songlink_title_matches(track, page):
     return title in text or title_core(track.get("title", "")) in text
 
 
+def musicfetch_token():
+    return os.environ.get("MUSICFETCH_TOKEN", "").strip()
+
+
+def musicfetch_artist_names(result):
+    names = []
+    for artist in result.get("artists", []) if isinstance(result, dict) else []:
+        if isinstance(artist, dict):
+            name = repair_text(artist.get("name", ""))
+        else:
+            name = repair_text(artist)
+        if name and name not in names:
+            names.append(name)
+    if not names and isinstance(result, dict):
+        fallback = repair_text(result.get("artistName", ""))
+        if fallback:
+            names.append(fallback)
+    return names
+
+
+def musicfetch_result_matches(track, result):
+    if not isinstance(result, dict):
+        return False
+    if result.get("type") not in (None, "track"):
+        return False
+    title = repair_text(result.get("name") or result.get("title") or "")
+    if not title:
+        return False
+    title_score = title_match_score(track.get("title", ""), title)
+    artists = musicfetch_artist_names(result)
+    artist_score = artist_match_score(track.get("artist", ""), artists)
+    if track.get("artist"):
+        return title_score >= 0.93 and artist_score >= 0.88
+    return title_score >= 0.98
+
+
+def musicfetch_yandex_url(result):
+    services = result.get("services", {}) if isinstance(result, dict) else {}
+    yandex = services.get("yandex") if isinstance(services, dict) else None
+    if not isinstance(yandex, dict):
+        return ""
+    url = repair_text(yandex.get("link") or yandex.get("url") or "")
+    if re.match(r"^https?://music\.yandex\.(?:ru|com)/", url, re.I):
+        return url
+    return ""
+
+
+def musicfetch_get(url, params):
+    global _MUSICFETCH_LAST_REQUEST
+
+    token = musicfetch_token()
+    if not token:
+        return None, "MUSICFETCH_TOKEN не настроен"
+
+    with _MUSICFETCH_LOCK:
+        elapsed = time.monotonic() - _MUSICFETCH_LAST_REQUEST
+        wait = MUSICFETCH_MIN_INTERVAL - elapsed
+        if wait > 0:
+            time.sleep(wait)
+
+        try:
+            response = requests.get(
+                url,
+                params=params,
+                headers={
+                    "x-token": token,
+                    "Accept": "application/json",
+                    "User-Agent": H["User-Agent"],
+                },
+                timeout=MUSICFETCH_TIMEOUT,
+            )
+        except requests.RequestException as exc:
+            _MUSICFETCH_LAST_REQUEST = time.monotonic()
+            return None, f"Musicfetch недоступен: {exc}"
+
+        _MUSICFETCH_LAST_REQUEST = time.monotonic()
+
+    if response.status_code in (401, 403):
+        return None, "MUSICFETCH_TOKEN отклонён"
+    if response.status_code == 429:
+        return None, "Musicfetch rate limit"
+    if response.status_code != 200:
+        return None, f"Musicfetch HTTP {response.status_code}"
+
+    try:
+        data = response.json()
+    except ValueError:
+        return None, "Musicfetch вернул не JSON"
+
+    result = data.get("result") if isinstance(data, dict) else None
+    if not isinstance(result, dict):
+        return None, "Musicfetch не вернул result"
+    return result, ""
+
+
+def musicfetch_verify_yandex(track, apple_url):
+    if not apple_url:
+        return {
+            "status": "not_confirmed",
+            "url": "",
+            "error": "нет Apple Music URL для Musicfetch",
+        }
+
+    url_result, error = musicfetch_get(
+        MUSICFETCH_URL_LOOKUP,
+        {
+            "url": apple_url,
+            "services": "yandex",
+            "country": "RU",
+            "withErrors": "true",
+            "withDistributor": "true",
+        },
+    )
+    if error:
+        return {"status": "not_confirmed", "url": "", "error": error}
+    if not musicfetch_result_matches(track, url_result):
+        return {
+            "status": "not_confirmed",
+            "url": "",
+            "error": "Musicfetch URL lookup не подтвердил точный трек",
+        }
+
+    common = {
+        "isrc": repair_text(url_result.get("isrc", "")),
+        "musicfetch_label": repair_text(url_result.get("label", "")),
+        "distributor": repair_text(url_result.get("distributor", "")),
+    }
+    yandex_url = musicfetch_yandex_url(url_result)
+    if yandex_url:
+        return {
+            "status": "found",
+            "url": yandex_url,
+            "verification": "musicfetch_url",
+            **common,
+        }
+
+    isrc = common["isrc"]
+    if not isrc:
+        return {
+            "status": "not_confirmed",
+            "url": "",
+            "error": "Musicfetch URL lookup не дал ISRC",
+            **common,
+        }
+
+    isrc_result, error = musicfetch_get(
+        MUSICFETCH_ISRC_LOOKUP,
+        {
+            "isrc": isrc,
+            "services": "yandex",
+            "country": "RU",
+            "withErrors": "true",
+            "withDistributor": "true",
+        },
+    )
+    if error:
+        return {
+            "status": "not_confirmed",
+            "url": "",
+            "error": error,
+            **common,
+        }
+    if not musicfetch_result_matches(track, isrc_result):
+        return {
+            "status": "not_confirmed",
+            "url": "",
+            "error": "Musicfetch ISRC lookup не подтвердил точный трек",
+            **common,
+        }
+
+    yandex_url = musicfetch_yandex_url(isrc_result)
+    if yandex_url:
+        return {
+            "status": "found",
+            "url": yandex_url,
+            "verification": "musicfetch_isrc",
+            **common,
+        }
+
+    return {
+        "status": "verified_missing",
+        "url": "",
+        "verification": "songlink+musicfetch_url+musicfetch_isrc",
+        "evidence": [
+            "Songlink: прямой Yandex URL отсутствует",
+            "Musicfetch URL lookup: Yandex match отсутствует",
+            "Musicfetch ISRC lookup: Yandex match отсутствует",
+        ],
+        **common,
+    }
+
+
 def check_yandex_track(track):
     source = find_itunes_track(track)
     if not source:
@@ -750,10 +950,20 @@ def check_yandex_track(track):
             "status": "uncertain",
             "score": source["quality"]["score"],
             "url": "",
+            "apple_url": apple_url,
             "error": "у подтверждённого iTunes-трека нет trackId",
         }
 
     resolver_url = SONGLINK_TRACK.format(track_id=track_id)
+    base = {
+        "score": source["quality"]["score"],
+        "source_url": resolver_url,
+        "apple_url": apple_url,
+        "itunes_track_id": str(track_id),
+        "matched_title": repair_text(item.get("trackName", "")),
+        "matched_artist": repair_text(item.get("artistName", "")),
+    }
+
     last_error = None
     for attempt in range(1, SONGLINK_RETRIES + 1):
         try:
@@ -768,48 +978,32 @@ def check_yandex_track(track):
             page = response.text
             if not songlink_title_matches(track, page):
                 return {
+                    **base,
                     "status": "uncertain",
-                    "score": source["quality"]["score"],
                     "url": "",
-                    "source_url": resolver_url,
-                    "apple_url": apple_url,
                     "error": "Songlink не подтвердил название трека",
                 }
 
             urls = extract_yandex_urls(page)
             if urls:
                 return {
+                    **base,
                     "status": "found",
-                    "score": source["quality"]["score"],
                     "url": urls[0],
-                    "source_url": resolver_url,
-                    "apple_url": apple_url,
-                    "itunes_track_id": str(track_id),
-                    "matched_title": repair_text(item.get("trackName", "")),
-                    "matched_artist": repair_text(item.get("artistName", "")),
+                    "verification": "songlink_direct",
                 }
 
-            return {
-                "status": "not_confirmed",
-                "score": source["quality"]["score"],
-                "url": "",
-                "source_url": resolver_url,
-                "apple_url": apple_url,
-                "itunes_track_id": str(track_id),
-                "matched_title": repair_text(item.get("trackName", "")),
-                "matched_artist": repair_text(item.get("artistName", "")),
-            }
+            musicfetch = musicfetch_verify_yandex(track, apple_url)
+            return {**base, **musicfetch}
         except requests.RequestException as exc:
             last_error = exc
             if attempt < SONGLINK_RETRIES:
                 time.sleep(attempt)
 
     return {
+        **base,
         "status": "error",
-        "score": source["quality"]["score"],
         "url": "",
-        "source_url": resolver_url,
-        "apple_url": apple_url,
         "error": f"Songlink недоступен: {last_error}",
     }
 
