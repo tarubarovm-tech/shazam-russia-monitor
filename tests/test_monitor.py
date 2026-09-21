@@ -1048,30 +1048,46 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(merged[0]["label"], "Label")
 
 
-    def test_yandex_match_threshold_accepts_exactly_90_percent(self):
+    def test_yandex_match_threshold_accepts_exactly_80_percent(self):
         track = {"title": "Apple Song", "artist": "Apple Artist", "label": ""}
         result = {
             "type": "track",
             "name": "Yandex Song",
             "artists": [{"name": "Yandex Artist"}],
         }
-        score = {"text": 0.90, "latin": 0.20, "best": 0.90}
+        score = {"text": 0.80, "latin": 0.20, "best": 0.80}
         with patch.object(monitor, "similarity_channels", return_value=score):
             quality = monitor.musicfetch_match_quality(track, result)
-        self.assertEqual(monitor.YANDEX_MATCH_THRESHOLD, 0.90)
+        self.assertEqual(monitor.YANDEX_MATCH_THRESHOLD, 0.80)
         self.assertTrue(quality["matches"])
 
-    def test_yandex_match_threshold_rejects_below_90_percent(self):
+    def test_yandex_match_threshold_rejects_below_80_percent(self):
         track = {"title": "Apple Song", "artist": "Apple Artist", "label": ""}
         result = {
             "type": "track",
             "name": "Yandex Song",
             "artists": [{"name": "Yandex Artist"}],
         }
-        score = {"text": 0.899, "latin": 0.20, "best": 0.899}
+        score = {"text": 0.799, "latin": 0.20, "best": 0.799}
         with patch.object(monitor, "similarity_channels", return_value=score):
             quality = monitor.musicfetch_match_quality(track, result)
         self.assertFalse(quality["matches"])
+
+    def test_title_95_artist_84_is_treated_as_yandex_match(self):
+        track = {"title": "Apple Song", "artist": "Apple Artist", "label": ""}
+        result = {
+            "type": "track",
+            "name": "Yandex Song",
+            "artists": [{"name": "Yandex Artist"}],
+        }
+        scores = [
+            {"text": 0.95, "latin": 0.20, "best": 0.95},
+            {"text": 0.95, "latin": 0.20, "best": 0.95},
+            {"text": 0.84, "latin": 0.20, "best": 0.84},
+        ]
+        with patch.object(monitor, "similarity_channels", side_effect=scores):
+            quality = monitor.musicfetch_match_quality(track, result)
+        self.assertTrue(quality["matches"])
 
 
 if __name__ == "__main__":
