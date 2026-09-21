@@ -568,5 +568,97 @@ class MonitorTests(unittest.TestCase):
         )
 
 
+    def test_collects_flat_apple_track_lockup(self):
+        node = {
+            "id": "track-lockup - pl.test - 1234567890",
+            "title": "Fresh Track",
+            "subtitleLinks": [{"title": "Fresh Artist"}],
+            "contentDescriptor": {
+                "identifiers": {"storeAdamID": "1234567890"}
+            },
+            "duration": 201000,
+        }
+        out = []
+        monitor.collect_apple_songs(node, out)
+        self.assertEqual(
+            out,
+            [{"title": "Fresh Track", "artist": "Fresh Artist", "label": ""}],
+        )
+
+    def test_decodes_serialized_server_data_meta(self):
+        payload = {
+            "items": [
+                {
+                    "id": "track-lockup - pl.test - 1111111111",
+                    "title": "Song One",
+                    "subtitleLinks": [{"title": "Artist One"}],
+                    "contentDescriptor": {
+                        "identifiers": {"storeAdamID": "1111111111"}
+                    },
+                    "duration": 180000,
+                },
+                {
+                    "id": "track-lockup - pl.test - 2222222222",
+                    "title": "Song Two",
+                    "subtitleLinks": [{"title": "Artist Two"}],
+                    "contentDescriptor": {
+                        "identifiers": {"storeAdamID": "2222222222"}
+                    },
+                    "duration": 190000,
+                },
+            ]
+        }
+        encoded = monitor.html_lib.escape(
+            monitor.json.dumps(payload, ensure_ascii=False),
+            quote=True,
+        )
+        page = (
+            '<html><head><meta name="serialized-server-data" '
+            f'content="{encoded}"></head></html>'
+        )
+        payloads = monitor.apple_embedded_payloads(page)
+        self.assertEqual(len(payloads), 1)
+        out = []
+        monitor.collect_apple_songs(payloads[0], out)
+        merged = monitor.merge_candidates(out)
+        self.assertEqual(
+            merged,
+            [
+                {"title": "Song One", "artist": "Artist One", "label": ""},
+                {"title": "Song Two", "artist": "Artist Two", "label": ""},
+            ],
+        )
+
+    def test_embedded_script_track_lockups_are_parsed(self):
+        payload = {
+            "playlist": {
+                "tracks": [
+                    {
+                        "id": "track-lockup - pl.test - 3333333333",
+                        "title": "Script Song",
+                        "artistName": "Script Artist",
+                        "contentDescriptor": {
+                            "identifiers": {"storeAdamID": "3333333333"}
+                        },
+                        "duration": 200000,
+                    }
+                ]
+            }
+        }
+        page = (
+            "<html><body><script>"
+            + monitor.json.dumps(payload, ensure_ascii=False)
+            + "</script></body></html>"
+        )
+        payloads = monitor.apple_embedded_payloads(page)
+        self.assertEqual(len(payloads), 1)
+        out = []
+        monitor.collect_apple_songs(payloads[0], out)
+        self.assertEqual(
+            monitor.merge_candidates(out),
+            [{"title": "Script Song", "artist": "Script Artist", "label": ""}],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
