@@ -40,7 +40,7 @@ YANDEX_CACHE_SECONDS = {
 }
 SONGLINK_RETRIES = 2
 ALERT_MODE = "apple_primary_shazam_fallback_v1"
-REPORT_YANDEX_STATUSES = {"not_confirmed"}
+REPORT_YANDEX_STATUSES = {"verified_missing"}
 TERMINAL_TRACK_STATUSES = {"baseline", "alerted", "yandex_found", "major_label"}
 _ITUNES_MATCH_MEMO = {}
 
@@ -96,7 +96,8 @@ def yandex_status_text(info):
     status = (info or {}).get("status")
     return {
         "found": "🟡 Яндекс: есть",
-        "not_confirmed": "⚪ Яндекс: не подтверждён",
+        "not_confirmed": "🟠 Яндекс: не удалось проверить",
+        "verified_missing": "⚪ Яндекс: не найден",
         "uncertain": "🟠 Яндекс: неоднозначно",
         "error": "⚠️ Яндекс: проверка недоступна",
     }.get(status, "⚠️ Яндекс: не проверен")
