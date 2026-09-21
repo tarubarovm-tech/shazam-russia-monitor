@@ -437,7 +437,7 @@
     },
     {
       "title": "Вчера (Cover)",
-      "artist": "ЕВА ВЛАСОВА",
+      "artist": "Ева Власова",
       "label": ""
     },
     {
@@ -1439,7 +1439,7 @@
     },
     {
       "title": "Вчера (Cover)",
-      "artist": "ЕВА ВЛАСОВА",
+      "artist": "Ева Власова",
       "label": ""
     },
     {
@@ -2003,7 +2003,7 @@
       "label": ""
     }
   ],
-  "_schema_version": 3,
+  "_schema_version": 5,
   "_label_cache": {
     "давай на самый верх\u001fzivert, эвер & directoreels": {
       "label": "Vibe Department / СЕМЬЯ",
