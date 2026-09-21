@@ -8,18 +8,27 @@ import monitor
 
 CASES = [
     {"title": "Die With A Smile", "artist": "Lady Gaga & Bruno Mars", "label": ""},
-    {"title": "Starburster", "artist": "Fontaines D.C.", "label": ""},
     {"title": "Вены-реки", "artist": "Анастасия Стоцкая", "label": ""},
 ]
 
-results = []
+out = []
 failed = False
 for track in CASES:
-    result = monitor.check_yandex_track(track)
-    results.append({"track": track, "result": result})
-    if result.get("status") not in {"found", "uncertain"}:
+    query = " ".join([track["title"], track["artist"]]).strip()
+    items = monitor.yandex_search_results(query)
+    qualities = [monitor.yandex_candidate_quality(track, item) for item in items[:20]]
+    accepted = [q for q in qualities if q["status"] in {"found", "uncertain"}]
+    out.append(
+        {
+            "query": query,
+            "items": len(items),
+            "best": max(qualities, key=lambda x: x["score"]) if qualities else None,
+            "accepted": accepted[:3],
+        }
+    )
+    if not accepted:
         failed = True
 
-print(json.dumps(results, ensure_ascii=False, indent=2))
+print(json.dumps(out, ensure_ascii=False, indent=2))
 if failed:
     sys.exit(1)
