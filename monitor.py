@@ -37,6 +37,8 @@ YANDEX_CACHE_SECONDS = {
     "error": 10 * 60,
 }
 SONGLINK_RETRIES = 2
+ALERT_MODE = "new_tracks_without_yandex_v1"
+REPORT_YANDEX_STATUSES = {"not_confirmed"}
 _ITUNES_MATCH_MEMO = {}
 
 
@@ -829,22 +831,32 @@ def enrich_report_yandex(state, delta, now_utc):
     return result
 
 
-def report(name, delta, now, yandex_info=None):
-    added, gone, moved = delta["added"], delta["gone"], delta["moved"]
+def added_only_delta(delta):
+    return {"added": list(delta.get("added", [])), "gone": [], "moved": []}
+
+
+def select_new_without_yandex(delta, yandex_info):
+    selected = []
+    for entry in delta.get("added", []):
+        _, _, track = entry
+        info = (yandex_info or {}).get(cache_key(track), {})
+        if info.get("status") in REPORT_YANDEX_STATUSES:
+            selected.append(entry)
+    return selected
+
+
+def report_new_without_yandex(name, added, now, yandex_info=None):
     lines = [
-        f"🔄 {name}",
+        f"🚨 {name}",
         f"Обнаружено: {now}",
-        f"Новых: {len(added)} | Ушло: {len(gone)} | Сменили позицию: {len(moved)}",
+        f"Новых треков без подтверждения в Яндекс Музыке: {len(added)}",
+        "",
+        "🆕 НОВЫЕ:",
     ]
-    if added:
-        lines += ["", "🆕 НОВЫЕ:"] + [f"#{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))}" for p, _, track in added[:30]]
-    if gone:
-        lines += ["", "❌ УШЛИ:"] + [f"было #{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))}" for p, _, track in gone[:20]]
-    if moved:
-        lines += ["", "📈 ИЗМЕНЕНИЯ ПОЗИЦИЙ:"] + [
-            f"{'↑' if p < old_p else '↓'} #{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))} (было #{old_p})"
-            for _, p, old_p, _, track in moved[:25]
-        ]
+    lines += [
+        f"#{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))}"
+        for p, _, track in added
+    ]
     return "\n".join(lines)
 
 
@@ -915,6 +927,7 @@ def main():
     shazam_name = "Shazam Top 200 Russia"
     apple_name = "Apple Music — Shazam Charts Russia"
     results = {}
+    initialize_baseline = state.get("_alert_mode") != ALERT_MODE
 
     try:
         results[shazam_name] = shazam()
@@ -930,35 +943,48 @@ def main():
         enrich_metadata(results[shazam_name], results[apple_name])
         enrich_metadata(results[apple_name], results[shazam_name])
 
-    for name in (shazam_name, apple_name):
-        current = results.get(name)
-        if current is None:
-            continue
-        try:
-            old = state.get(name)
-            if old:
-                delta = make_delta(old, current)
-                if has_chart_change(delta):
-                    fingerprint = event_fingerprint(delta)
-                    if recent_duplicate(state, fingerprint, now_utc):
-                        print(f"Duplicate chart event suppressed for {name}")
-                    else:
-                        enrich_report_labels(state, delta, now_utc)
-                        yandex_info = enrich_report_yandex(state, delta, now_utc)
-                        send(report(name, delta, now_local, yandex_info))
-                        remember_event(state, fingerprint, name, now_utc)
-                        dirty = True
-            else:
-                send(
-                    f"📌 {name}: GitHub-монитор сохранил исходное состояние — "
-                    f"{len(current)}/200, {now_local}."
-                )
+    if initialize_baseline and not errors and results.get(shazam_name) and results.get(apple_name):
+        for name in (shazam_name, apple_name):
+            state[name] = results[name]
+        state["_alert_mode"] = ALERT_MODE
+        state["_baseline_at"] = now_utc.isoformat().replace("+00:00", "Z")
+        state["_recent_events"] = []
+        dirty = True
+        print(f"Alert baseline initialized at {now_local}; no Telegram alert sent.")
+    else:
+        for name in (shazam_name, apple_name):
+            current = results.get(name)
+            if current is None:
+                continue
+            try:
+                old = state.get(name)
+                if old:
+                    delta = make_delta(old, current)
+                    if delta["added"]:
+                        new_delta = added_only_delta(delta)
+                        enrich_report_labels(state, new_delta, now_utc)
+                        yandex_info = enrich_report_yandex(state, new_delta, now_utc)
+                        selected = select_new_without_yandex(new_delta, yandex_info)
 
-            if old != current:
-                state[name] = current
-                dirty = True
-        except Exception as exc:
-            errors.append(f"{name}: {exc}")
+                        if selected:
+                            filtered_delta = {"added": selected, "gone": [], "moved": []}
+                            fingerprint = event_fingerprint(filtered_delta)
+                            if recent_duplicate(state, fingerprint, now_utc):
+                                print(f"Duplicate new-track alert suppressed for {name}")
+                            else:
+                                send(report_new_without_yandex(name, selected, now_local, yandex_info))
+                                remember_event(state, fingerprint, name, now_utc)
+                                dirty = True
+                        else:
+                            print(
+                                f"{name}: {len(delta['added'])} new track(s), "
+                                "but all were confirmed on Yandex or could not be classified as missing."
+                            )
+                if old != current:
+                    state[name] = current
+                    dirty = True
+            except Exception as exc:
+                errors.append(f"{name}: {exc}")
 
     for message in errors:
         print(message)
