@@ -583,7 +583,12 @@ class MonitorTests(unittest.TestCase):
         monitor.collect_apple_songs(node, out)
         self.assertEqual(
             out,
-            [{"title": "Fresh Track", "artist": "Fresh Artist", "label": ""}],
+            [{
+                "title": "Fresh Track",
+                "artist": "Fresh Artist",
+                "label": "",
+                "apple_track_id": "1234567890",
+            }],
         )
 
     def test_decodes_serialized_server_data_meta(self):
@@ -625,8 +630,18 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(
             merged,
             [
-                {"title": "Song One", "artist": "Artist One", "label": ""},
-                {"title": "Song Two", "artist": "Artist Two", "label": ""},
+                {
+                    "title": "Song One",
+                    "artist": "Artist One",
+                    "label": "",
+                    "apple_track_id": "1111111111",
+                },
+                {
+                    "title": "Song Two",
+                    "artist": "Artist Two",
+                    "label": "",
+                    "apple_track_id": "2222222222",
+                },
             ],
         )
 
@@ -963,6 +978,69 @@ class MonitorTests(unittest.TestCase):
         self.assertTrue(result["isrc_match"]["matches"])
         self.assertGreaterEqual(result["url_match"]["title_latin"], 0.93)
         self.assertGreaterEqual(result["isrc_match"]["title_text"], 0.99)
+
+
+    def test_normalized_tracks_preserves_apple_source_metadata(self):
+        tracks = monitor.normalized_tracks([
+            {
+                "title": "Song",
+                "artist": "Artist",
+                "label": "Label",
+                "apple_track_id": "1234567890",
+                "apple_url": "https://music.apple.com/ru/song/1234567890",
+            }
+        ])
+        self.assertEqual(tracks[0]["apple_track_id"], "1234567890")
+        self.assertEqual(
+            tracks[0]["apple_url"],
+            "https://music.apple.com/ru/song/1234567890",
+        )
+
+    def test_find_itunes_track_prefers_native_apple_id_lookup(self):
+        track = {
+            "title": "Exact Song",
+            "artist": "Exact Artist",
+            "label": "",
+            "apple_track_id": "1234567890",
+        }
+        response = Mock()
+        response.json.return_value = {
+            "results": [
+                {
+                    "trackId": 1234567890,
+                    "trackName": "Exact Song",
+                    "artistName": "Exact Artist",
+                    "trackViewUrl": "https://music.apple.com/ru/song/1234567890",
+                    "collectionId": 987654321,
+                }
+            ]
+        }
+        with patch.object(monitor, "get", return_value=response) as getter:
+            result = monitor.find_itunes_track(track)
+
+        self.assertIsNotNone(result)
+        self.assertTrue(result["quality"]["native_id"])
+        self.assertEqual(result["item"]["trackId"], 1234567890)
+        first_call = getter.call_args_list[0]
+        self.assertEqual(first_call.args[0], monitor.ITUNES_LOOKUP)
+        self.assertEqual(first_call.kwargs["params"]["id"], "1234567890")
+
+    def test_merge_candidates_keeps_native_apple_id(self):
+        merged = monitor.merge_candidates([
+            {
+                "title": "Song",
+                "artist": "Artist",
+                "label": "",
+                "apple_track_id": "1234567890",
+            },
+            {
+                "title": "Song",
+                "artist": "Artist",
+                "label": "Label",
+            },
+        ])
+        self.assertEqual(merged[0]["apple_track_id"], "1234567890")
+        self.assertEqual(merged[0]["label"], "Label")
 
 
 if __name__ == "__main__":
