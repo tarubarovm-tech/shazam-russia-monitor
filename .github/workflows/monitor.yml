@@ -33,6 +33,11 @@ jobs:
           # Прямая сверка с Яндексом. Без него monitor.py откатывается на
           # старую цепочку через song.link/Musicfetch.
           YANDEX_TOKEN: ${{ secrets.YANDEX_TOKEN }}
+          # Ссылки на Spotify в алертах. Без ключей ссылка будет на Apple Music:
+          # Songlink ссылки Spotify не отдаёт (у него запись о платформе есть,
+          # но без url), поэтому спрашиваем Spotify напрямую.
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
         run: python monitor.py
       - name: Save chart state
         run: |

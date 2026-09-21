@@ -7,3 +7,7 @@ tzdata==2025.2
 yandex-music==2.2.0
 thefuzz==0.22.1
 python-Levenshtein==0.27.3
+
+# Ссылки на Spotify (spotify_link.py) своих зависимостей не требуют —
+# ему хватает requests и thefuzz выше. Нужны только ключи приложения
+# в переменных SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET.

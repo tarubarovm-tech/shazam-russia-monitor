@@ -1621,10 +1621,39 @@ def track_open_url(info):
     )
 
 
+def _spotify_url_via_api(track):
+    """
+    Ссылка на трек в Spotify через официальный API. "" — путь недоступен.
+
+    Songlink ссылки Spotify НЕ отдаёт: в его __NEXT_DATA__ запись о платформе
+    есть, но без поля url — в отличие от Apple Music, Deezer, TIDAL и Yandex.
+    Проверено 21.09.2026 на локальных новинках и на мировых хитах: ни одной
+    ссылки open.spotify.com в выдаче Songlink нет. Поэтому спрашиваем Spotify
+    напрямую, а парсинг страницы остаётся запасным путём.
+    """
+    try:
+        import spotify_link
+    except Exception:                                  # noqa: BLE001
+        return ""
+    if not spotify_link.available():
+        return ""
+    try:
+        return spotify_link.find_track_url(
+            track.get("artist", ""), track.get("title", ""))
+    except Exception:                                  # noqa: BLE001
+        return ""
+
+
 def fetch_spotify_link_for_track(track, info=None):
     info = dict(info or {})
     current = repair_text(info.get("spotify_url", ""))
     if current:
+        return info
+
+    # Сначала — официальный Spotify API, он единственный реально отдаёт ссылку.
+    api_url = _spotify_url_via_api(track)
+    if api_url:
+        info["spotify_url"] = api_url
         return info
 
     source_url = repair_text(info.get("source_url", ""))
