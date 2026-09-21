@@ -756,6 +756,21 @@ def extract_yandex_urls(page):
     return urls
 
 
+def extract_spotify_urls(page):
+    text = html_lib.unescape(str(page or "")).replace("\\/", "/")
+    urls = []
+    pattern = (
+        r"https?://open\.spotify\.com/"
+        r"(?:(?:intl-[a-z]{2})/)?track/[A-Za-z0-9]+"
+        r"[^\"'<>\s]*"
+    )
+    for url in re.findall(pattern, text, flags=re.I):
+        url = url.rstrip(".,);]")
+        if url not in urls:
+            urls.append(url)
+    return urls
+
+
 def songlink_title_matches(track, page):
     title = match_id(track.get("title", ""))
     if not title:
@@ -1141,6 +1156,9 @@ def check_yandex_track(track):
                 timeout=25,
             )
             page = response.text
+            spotify_urls = extract_spotify_urls(page)
+            if spotify_urls:
+                base["spotify_url"] = spotify_urls[0]
             if not songlink_title_matches(track, page):
                 return {
                     **base,
@@ -1226,6 +1244,7 @@ def store_yandex_cache(state, track, info, now_utc):
         "matched_artist": info.get("matched_artist", ""),
         "source_url": info.get("source_url", ""),
         "apple_url": info.get("apple_url", ""),
+        "spotify_url": info.get("spotify_url", ""),
         "itunes_track_id": info.get("itunes_track_id", ""),
         "isrc": info.get("isrc", ""),
         "musicfetch_label": info.get("musicfetch_label", ""),
@@ -1595,7 +1614,65 @@ def mark_alerted(state, source, entries, now_utc):
 
 def track_open_url(info):
     info = info or {}
-    return repair_text(info.get("apple_url", "")) or repair_text(info.get("source_url", ""))
+    return (
+        repair_text(info.get("spotify_url", ""))
+        or repair_text(info.get("apple_url", ""))
+        or repair_text(info.get("source_url", ""))
+    )
+
+
+def fetch_spotify_link_for_track(track, info=None):
+    info = dict(info or {})
+    current = repair_text(info.get("spotify_url", ""))
+    if current:
+        return info
+
+    source_url = repair_text(info.get("source_url", ""))
+    apple_url = repair_text(info.get("apple_url", ""))
+
+    if not source_url:
+        source = find_itunes_track(track)
+        if not source:
+            return info
+        item = source["item"]
+        track_id = item.get("trackId")
+        if not track_id:
+            return info
+        source_url = SONGLINK_TRACK.format(track_id=track_id)
+        info["source_url"] = source_url
+        if not apple_url:
+            apple_url = repair_text(item.get("trackViewUrl", ""))
+            if apple_url:
+                info["apple_url"] = apple_url
+
+    try:
+        page = get(
+            source_url,
+            headers={
+                "User-Agent": H["User-Agent"],
+                "Accept-Language": H["Accept-Language"],
+            },
+            timeout=25,
+        ).text
+    except requests.RequestException:
+        return info
+
+    if not songlink_title_matches(track, page):
+        return info
+
+    urls = extract_spotify_urls(page)
+    if urls:
+        info["spotify_url"] = urls[0]
+    return info
+
+
+def enrich_selected_spotify_links(state, selected, yandex_info, now_utc):
+    for _, _, track in selected:
+        key = cache_key(track)
+        info = yandex_info.get(key, {})
+        enriched = fetch_spotify_link_for_track(track, info)
+        yandex_info[key] = enriched
+        store_yandex_cache(state, track, enriched, now_utc)
 
 
 def report_new_without_yandex(name, added, now, yandex_info=None):
@@ -1748,6 +1825,12 @@ def process_source(state, source_name, current, now_local, now_utc):
                         mark_alerted(state, source_name, selected, now_utc)
                         print(f"Duplicate new-track alert suppressed for {source_name}")
                     else:
+                        enrich_selected_spotify_links(
+                            state,
+                            selected,
+                            yandex_info,
+                            now_utc,
+                        )
                         send(
                             report_new_without_yandex(
                                 source_name,
