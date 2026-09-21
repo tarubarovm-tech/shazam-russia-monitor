@@ -321,5 +321,141 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(state["_baseline_at"], "2026-09-21T12:00:00Z")
 
 
+    def test_baseline_track_is_not_eligible_for_fallback(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        track = {"title": "Existing", "artist": "Artist", "label": ""}
+        monitor.reset_alert_mode(state, now)
+        monitor.baseline_source(
+            state,
+            "Apple Music — Shazam Charts Russia",
+            [track],
+            now,
+        )
+        delta = {
+            "added": [(42, "existing", {"title": "Existing", "artist": "Artist", "label": ""})],
+            "gone": [],
+            "moved": [],
+        }
+        self.assertEqual(monitor.eligible_new_entries(state, delta), [])
+
+    def test_alerted_apple_track_is_not_eligible_from_shazam(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        track = {"title": "New Song", "artist": "Artist", "label": ""}
+        monitor.reset_alert_mode(state, now)
+        monitor.set_track_registry_status(
+            state,
+            track,
+            "alerted",
+            "Apple Music — Shazam Charts Russia",
+            now,
+        )
+        shazam_track = {"title": "New Song", "artist": "Artist", "label": ""}
+        delta = {"added": [(12, "new", shazam_track)], "gone": [], "moved": []}
+        self.assertEqual(monitor.eligible_new_entries(state, delta), [])
+
+    def test_yandex_found_apple_track_is_not_eligible_from_shazam(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        track = {"title": "Found Song", "artist": "Artist", "label": ""}
+        monitor.reset_alert_mode(state, now)
+        monitor.set_track_registry_status(
+            state,
+            track,
+            "yandex_found",
+            "Apple Music — Shazam Charts Russia",
+            now,
+        )
+        delta = {"added": [(33, "found", track)], "gone": [], "moved": []}
+        self.assertEqual(monitor.eligible_new_entries(state, delta), [])
+
+    def test_pending_apple_track_is_eligible_for_shazam_retry(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        apple_track = {"title": "Retry Me", "artist": "Artist", "label": ""}
+        monitor.reset_alert_mode(state, now)
+        monitor.set_track_registry_status(
+            state,
+            apple_track,
+            "pending",
+            "Apple Music — Shazam Charts Russia",
+            now,
+        )
+        shazam_track = {"title": "Retry Me", "artist": "Artist", "label": ""}
+        delta = {"added": [(88, "retry", shazam_track)], "gone": [], "moved": []}
+        self.assertEqual(
+            monitor.eligible_new_entries(state, delta),
+            [(88, "retry", shazam_track)],
+        )
+
+    def test_registry_matches_same_track_when_apple_artist_missing(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        apple_track = {"title": "Same Song", "artist": "", "label": ""}
+        shazam_track = {"title": "Same Song", "artist": "Correct Artist", "label": ""}
+        monitor.reset_alert_mode(state, now)
+        monitor.set_track_registry_status(
+            state,
+            apple_track,
+            "baseline",
+            "Apple Music — Shazam Charts Russia",
+            now,
+        )
+        self.assertEqual(
+            monitor.track_registry_status(state, shazam_track),
+            "baseline",
+        )
+
+    def test_yandex_outcomes_create_terminal_and_pending_states(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        found = {"title": "Found", "artist": "A", "label": ""}
+        missing = {"title": "Missing", "artist": "B", "label": ""}
+        pending = {"title": "Pending", "artist": "C", "label": ""}
+        entries = [
+            (1, "found", found),
+            (2, "missing", missing),
+            (3, "pending", pending),
+        ]
+        info = {
+            monitor.cache_key(found): {"status": "found"},
+            monitor.cache_key(missing): {"status": "not_confirmed"},
+            monitor.cache_key(pending): {"status": "error"},
+        }
+        selected = monitor.apply_yandex_outcomes(
+            state,
+            "Apple Music — Shazam Charts Russia",
+            entries,
+            info,
+            now,
+        )
+        self.assertEqual(selected, [(2, "missing", missing)])
+        self.assertEqual(monitor.track_registry_status(state, found), "yandex_found")
+        self.assertEqual(monitor.track_registry_status(state, pending), "pending")
+        self.assertIsNone(monitor.track_registry_status(state, missing))
+
+    def test_mark_alerted_blocks_future_fallback(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        track = {"title": "Alert Me", "artist": "Artist", "label": ""}
+        entries = [(1, "alert", track)]
+        monitor.reset_alert_mode(state, now)
+        monitor.mark_alerted(
+            state,
+            "Apple Music — Shazam Charts Russia",
+            entries,
+            now,
+        )
+        self.assertEqual(monitor.track_registry_status(state, track), "alerted")
+        self.assertEqual(
+            monitor.eligible_new_entries(
+                state,
+                {"added": [(9, "alert", track)], "gone": [], "moved": []},
+            ),
+            [],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
