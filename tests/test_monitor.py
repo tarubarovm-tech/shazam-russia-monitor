@@ -457,5 +457,125 @@ class MonitorTests(unittest.TestCase):
         )
 
 
+    def test_major_label_family_detects_universal_imprints(self):
+        self.assertEqual(
+            monitor.major_label_family("℗ 2026 Interscope Records"),
+            "Universal Music Group",
+        )
+        self.assertEqual(
+            monitor.major_label_family("Republic Records"),
+            "Universal Music Group",
+        )
+        self.assertEqual(
+            monitor.major_label_family("Virgin Music Group"),
+            "Universal Music Group",
+        )
+
+    def test_major_label_family_detects_sony_imprints(self):
+        self.assertEqual(
+            monitor.major_label_family("Columbia Records"),
+            "Sony Music Entertainment",
+        )
+        self.assertEqual(
+            monitor.major_label_family("AWAL"),
+            "Sony Music Entertainment",
+        )
+        self.assertEqual(
+            monitor.major_label_family("Indie Label / The Orchard"),
+            "Sony Music Entertainment",
+        )
+
+    def test_major_label_family_detects_warner_imprints(self):
+        self.assertEqual(
+            monitor.major_label_family("Atlantic Records"),
+            "Warner Music Group",
+        )
+        self.assertEqual(
+            monitor.major_label_family("Fueled By Ramen"),
+            "Warner Music Group",
+        )
+        self.assertEqual(
+            monitor.major_label_family("ADA"),
+            "Warner Music Group",
+        )
+
+    def test_independent_label_is_not_classified_as_major(self):
+        self.assertIsNone(
+            monitor.major_label_family("Vibe Department / СЕМЬЯ")
+        )
+
+    def test_major_label_track_is_suppressed_and_terminal(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        track = {
+            "title": "Major Song",
+            "artist": "Artist",
+            "label": "Interscope Records",
+        }
+        monitor.reset_alert_mode(state, now)
+        selected = monitor.filter_non_major_entries(
+            state,
+            "Apple Music — Shazam Charts Russia",
+            [(10, "major", track)],
+            now,
+        )
+        self.assertEqual(selected, [])
+        self.assertEqual(
+            monitor.track_registry_status(state, track),
+            "major_label",
+        )
+        self.assertEqual(
+            monitor.eligible_new_entries(
+                state,
+                {"added": [(20, "major", track)], "gone": [], "moved": []},
+            ),
+            [],
+        )
+
+    def test_unknown_label_is_not_sent_but_can_be_retried(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        track = {"title": "Unknown Label", "artist": "Artist", "label": ""}
+        monitor.reset_alert_mode(state, now)
+        selected = monitor.filter_non_major_entries(
+            state,
+            "Apple Music — Shazam Charts Russia",
+            [(11, "unknown", track)],
+            now,
+        )
+        self.assertEqual(selected, [])
+        self.assertEqual(
+            monitor.track_registry_status(state, track),
+            "pending",
+        )
+        self.assertEqual(
+            monitor.eligible_new_entries(
+                state,
+                {"added": [(30, "unknown", track)], "gone": [], "moved": []},
+            ),
+            [(30, "unknown", track)],
+        )
+
+    def test_non_major_label_passes_final_filter(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        track = {
+            "title": "Indie Song",
+            "artist": "Artist",
+            "label": "Vibe Department / СЕМЬЯ",
+        }
+        monitor.reset_alert_mode(state, now)
+        entry = (7, "indie", track)
+        self.assertEqual(
+            monitor.filter_non_major_entries(
+                state,
+                "Apple Music — Shazam Charts Russia",
+                [entry],
+                now,
+            ),
+            [entry],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

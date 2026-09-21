@@ -39,7 +39,7 @@ YANDEX_CACHE_SECONDS = {
 SONGLINK_RETRIES = 2
 ALERT_MODE = "apple_primary_shazam_fallback_v1"
 REPORT_YANDEX_STATUSES = {"not_confirmed"}
-TERMINAL_TRACK_STATUSES = {"baseline", "alerted", "yandex_found"}
+TERMINAL_TRACK_STATUSES = {"baseline", "alerted", "yandex_found", "major_label"}
 _ITUNES_MATCH_MEMO = {}
 
 
@@ -921,6 +921,72 @@ def eligible_new_entries(state, delta):
     return result
 
 
+MAJOR_LABEL_ALIASES = {
+    "Universal Music Group": (
+        "universal music", "interscope", "geffen", "a&m records", "capitol",
+        "def jam", "island records", "motown", "polydor", "decca", "emi",
+        "republic records", "verve", "virgin music", "astralwerks",
+        "aftermath entertainment", "shady records", "spinefarm",
+        "mca records", "priority records", "0207 def jam",
+    ),
+    "Sony Music Entertainment": (
+        "sony music", "columbia records", "rca records", "epic records",
+        "arista records", "legacy recordings", "masterworks",
+        "provident label group", "rca inspiration", "santa anna records",
+        "sony classical", "sony music latin", "sony music nashville",
+        "ultra records", "alamo records", "awal", "the orchard",
+    ),
+    "Warner Music Group": (
+        "warner music", "warner records", "atlantic records", "elektra",
+        "parlophone", "300 entertainment", "10k projects", "asylum records",
+        "big beat records", "eastwest", "erato", "fueled by ramen",
+        "nonesuch", "reprise records", "rhino", "roadrunner records",
+        "sire records", "spinnin", "warner classics", "ada",
+    ),
+}
+
+
+def normalize_label(value):
+    value = match_id(value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def major_label_family(label):
+    normalized = normalize_label(label)
+    if not normalized:
+        return None
+
+    padded = f" {normalized} "
+    for family, aliases in MAJOR_LABEL_ALIASES.items():
+        for alias in aliases:
+            needle = f" {normalize_label(alias)} "
+            if needle in padded:
+                return family
+    return None
+
+
+def filter_non_major_entries(state, source, entries, now_utc):
+    selected = []
+    for entry in entries:
+        _, _, track = entry
+        label = repair_text(track.get("label", ""))
+        if not label:
+            set_track_registry_status(state, track, "pending", source, now_utc)
+            continue
+
+        family = major_label_family(label)
+        if family:
+            set_track_registry_status(state, track, "major_label", source, now_utc)
+            print(
+                f"{source}: suppressed major-label track "
+                f"{track.get('title', '')!r} ({label} -> {family})"
+            )
+            continue
+
+        selected.append(entry)
+    return selected
+
+
 def apply_yandex_outcomes(state, source, entries, yandex_info, now_utc):
     selected = []
     for entry in entries:
@@ -1078,6 +1144,12 @@ def process_source(state, source_name, current, now_local, now_utc):
                     source_name,
                     candidates,
                     yandex_info,
+                    now_utc,
+                )
+                selected = filter_non_major_entries(
+                    state,
+                    source_name,
+                    selected,
                     now_utc,
                 )
                 dirty = True
