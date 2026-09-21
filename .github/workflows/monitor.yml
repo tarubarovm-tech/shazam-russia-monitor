@@ -1,4 +1,4 @@
-name: Check Shazam charts
+name: Check Apple chart with Shazam fallback
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: shazam-chart-monitor
+  group: apple-primary-chart-monitor
   cancel-in-progress: false
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Run regression tests
         run: python -m unittest discover -s tests -v
-      - name: Check charts and notify Telegram
+      - name: Check Apple first, then Shazam fallback
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
