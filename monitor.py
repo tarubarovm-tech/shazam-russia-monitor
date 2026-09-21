@@ -1099,36 +1099,82 @@ def musicfetch_verify_yandex(track, apple_url):
     }
 
 
-def check_yandex_track(track):
+def direct_apple_identity(track):
+    track_id = repair_text(track.get("apple_track_id", ""))
+    if not track_id.isdigit():
+        return None
+    return {
+        "track_id": track_id,
+        "apple_url": repair_text(track.get("apple_url", "")),
+        "score": 1.0,
+        "matched_title": repair_text(track.get("title", "")),
+        "matched_artist": repair_text(track.get("artist", "")),
+        "native": True,
+    }
+
+
+def resolved_apple_identity(track):
+    native = direct_apple_identity(track)
+    if native:
+        return native
+
     source = find_itunes_track(track)
     if not source:
+        return None
+
+    item = source["item"]
+    track_id = item.get("trackId")
+    if not track_id:
+        return None
+
+    return {
+        "track_id": str(track_id),
+        "apple_url": repair_text(item.get("trackViewUrl", "")),
+        "score": source["quality"]["score"],
+        "matched_title": repair_text(item.get("trackName", "")),
+        "matched_artist": repair_text(item.get("artistName", "")),
+        "native": False,
+    }
+
+
+def ensure_apple_url(track, identity):
+    if identity.get("apple_url"):
+        return identity
+
+    source = find_itunes_track(track)
+    if not source:
+        return identity
+
+    item = source["item"]
+    if str(item.get("trackId", "")) != str(identity.get("track_id", "")):
+        return identity
+
+    updated = dict(identity)
+    updated["apple_url"] = repair_text(item.get("trackViewUrl", ""))
+    updated["score"] = max(float(identity.get("score", 0.0)), source["quality"]["score"])
+    return updated
+
+
+def check_yandex_track(track):
+    identity = resolved_apple_identity(track)
+    if not identity:
         return {
             "status": "uncertain",
             "score": 0.0,
             "url": "",
-            "error": "точный iTunes-источник не найден",
+            "error": "точный Apple/iTunes-источник не найден",
         }
 
-    item = source["item"]
-    track_id = item.get("trackId")
-    apple_url = repair_text(item.get("trackViewUrl", ""))
-    if not track_id:
-        return {
-            "status": "uncertain",
-            "score": source["quality"]["score"],
-            "url": "",
-            "apple_url": apple_url,
-            "error": "у подтверждённого iTunes-трека нет trackId",
-        }
-
+    track_id = identity["track_id"]
     resolver_url = SONGLINK_TRACK.format(track_id=track_id)
     base = {
-        "score": source["quality"]["score"],
+        "score": identity["score"],
         "source_url": resolver_url,
-        "apple_url": apple_url,
+        "apple_url": identity.get("apple_url", ""),
         "itunes_track_id": str(track_id),
-        "matched_title": repair_text(item.get("trackName", "")),
-        "matched_artist": repair_text(item.get("artistName", "")),
+        "matched_title": identity["matched_title"],
+        "matched_artist": identity["matched_artist"],
+        "native_apple_id": bool(identity.get("native")),
     }
 
     last_error = None
@@ -1160,7 +1206,11 @@ def check_yandex_track(track):
                     "verification": "songlink_direct",
                 }
 
-            musicfetch = musicfetch_verify_yandex(track, apple_url)
+            if not identity.get("apple_url"):
+                identity = ensure_apple_url(track, identity)
+                base["apple_url"] = identity.get("apple_url", "")
+
+            musicfetch = musicfetch_verify_yandex(track, base["apple_url"])
             return {**base, **musicfetch}
         except requests.RequestException as exc:
             last_error = exc
@@ -1339,7 +1389,7 @@ def enrich_report_yandex(state, delta, now_utc):
             unresolved.append(track)
 
     if unresolved:
-        workers = min(4, len(unresolved))
+        workers = min(12, len(unresolved))
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = {pool.submit(check_yandex_track, track): track for track in unresolved}
             for future in as_completed(futures):
@@ -1665,7 +1715,6 @@ def process_source(state, source_name, current, now_local, now_utc):
             candidates = eligible_new_entries(state, added_only_delta(delta))
             if candidates:
                 candidate_delta = {"added": candidates, "gone": [], "moved": []}
-                enrich_report_labels(state, candidate_delta, now_utc)
                 yandex_info = enrich_report_yandex(state, candidate_delta, now_utc)
                 selected = apply_yandex_outcomes(
                     state,
@@ -1674,13 +1723,16 @@ def process_source(state, source_name, current, now_local, now_utc):
                     yandex_info,
                     now_utc,
                 )
-                selected = filter_non_major_entries(
-                    state,
-                    source_name,
-                    selected,
-                    now_utc,
-                    yandex_info,
-                )
+                if selected:
+                    selected_delta = {"added": selected, "gone": [], "moved": []}
+                    enrich_report_labels(state, selected_delta, now_utc)
+                    selected = filter_non_major_entries(
+                        state,
+                        source_name,
+                        selected,
+                        now_utc,
+                        yandex_info,
+                    )
                 dirty = True
 
                 if selected:
