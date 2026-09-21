@@ -7,6 +7,7 @@ import monitor
 class MonitorTests(unittest.TestCase):
     def setUp(self):
         monitor._ITUNES_MATCH_MEMO.clear()
+        monitor._MUSICFETCH_LAST_REQUEST = 0.0
 
     def test_repairs_mojibake(self):
         self.assertEqual(monitor.repair_text("ÐÐµÐ½Ñ-ÑÐµÐºÐ¸"), "Вены-реки")
@@ -681,6 +682,191 @@ class MonitorTests(unittest.TestCase):
             monitor.select_new_without_yandex(delta, info),
             [(1, "missing", track)],
         )
+
+
+    def test_musicfetch_url_lookup_can_confirm_yandex(self):
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        url_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600001",
+            "label": "Indie Label",
+            "distributor": "Indie Distributor",
+            "services": {
+                "yandex": {"link": "https://music.yandex.ru/track/12345"}
+            },
+        }
+        with patch.object(
+            monitor,
+            "musicfetch_get",
+            return_value=(url_result, ""),
+        ) as lookup:
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/1?i=2",
+            )
+        self.assertEqual(result["status"], "found")
+        self.assertEqual(result["url"], "https://music.yandex.ru/track/12345")
+        self.assertEqual(result["verification"], "musicfetch_url")
+        self.assertEqual(result["isrc"], "USABC2600001")
+        self.assertEqual(lookup.call_count, 1)
+
+    def test_musicfetch_isrc_lookup_can_confirm_yandex(self):
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        url_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600001",
+            "services": {},
+        }
+        isrc_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600001",
+            "services": {
+                "yandex": {"link": "https://music.yandex.ru/album/99/track/12345"}
+            },
+        }
+        with patch.object(
+            monitor,
+            "musicfetch_get",
+            side_effect=[(url_result, ""), (isrc_result, "")],
+        ) as lookup:
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/1?i=2",
+            )
+        self.assertEqual(result["status"], "found")
+        self.assertEqual(
+            result["url"],
+            "https://music.yandex.ru/album/99/track/12345",
+        )
+        self.assertEqual(result["verification"], "musicfetch_isrc")
+        self.assertEqual(lookup.call_count, 2)
+
+    def test_musicfetch_two_exact_misses_create_verified_missing(self):
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        url_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600001",
+            "label": "Small Label",
+            "distributor": "Small Distributor",
+            "services": {},
+        }
+        isrc_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600001",
+            "services": {},
+        }
+        with patch.object(
+            monitor,
+            "musicfetch_get",
+            side_effect=[(url_result, ""), (isrc_result, "")],
+        ):
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/1?i=2",
+            )
+        self.assertEqual(result["status"], "verified_missing")
+        self.assertEqual(
+            result["verification"],
+            "songlink+musicfetch_url+musicfetch_isrc",
+        )
+        self.assertEqual(len(result["evidence"]), 3)
+        self.assertEqual(result["distributor"], "Small Distributor")
+
+    def test_musicfetch_mismatch_never_creates_missing_status(self):
+        track = {"title": "Expected Song", "artist": "Expected Artist", "label": ""}
+        wrong = {
+            "type": "track",
+            "name": "Different Song",
+            "artists": [{"name": "Different Artist"}],
+            "isrc": "USABC2600001",
+            "services": {},
+        }
+        with patch.object(
+            monitor,
+            "musicfetch_get",
+            return_value=(wrong, ""),
+        ):
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/1?i=2",
+            )
+        self.assertEqual(result["status"], "not_confirmed")
+
+    def test_musicfetch_missing_token_never_creates_missing_status(self):
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        with patch.object(monitor, "musicfetch_token", return_value=""):
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/1?i=2",
+            )
+        self.assertEqual(result["status"], "not_confirmed")
+        self.assertIn("MUSICFETCH_TOKEN", result["error"])
+
+    def test_major_distributor_blocks_track_even_with_indie_label(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        track = {
+            "title": "Song",
+            "artist": "Artist",
+            "label": "Tiny Vanity Label",
+        }
+        entry = (5, "song", track)
+        info = {
+            monitor.cache_key(track): {
+                "status": "verified_missing",
+                "distributor": "Universal Music Group",
+            }
+        }
+        monitor.reset_alert_mode(state, now)
+        selected = monitor.filter_non_major_entries(
+            state,
+            "Apple Music — Shazam Charts Russia",
+            [entry],
+            now,
+            info,
+        )
+        self.assertEqual(selected, [])
+        self.assertEqual(monitor.track_registry_status(state, track), "major_label")
+
+    def test_musicfetch_label_can_enrich_before_major_filter(self):
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        entry = (5, "song", track)
+        info = {
+            monitor.cache_key(track): {
+                "status": "verified_missing",
+                "musicfetch_label": "Interscope Records",
+            }
+        }
+        monitor.reset_alert_mode(state, now)
+        selected = monitor.apply_yandex_outcomes(
+            state,
+            "Apple Music — Shazam Charts Russia",
+            [entry],
+            info,
+            now,
+        )
+        self.assertEqual(selected, [entry])
+        self.assertEqual(track["label"], "Interscope Records")
+        filtered = monitor.filter_non_major_entries(
+            state,
+            "Apple Music — Shazam Charts Russia",
+            selected,
+            now,
+            info,
+        )
+        self.assertEqual(filtered, [])
 
 
 if __name__ == "__main__":
