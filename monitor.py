@@ -918,6 +918,18 @@ def load_state():
     return state, dirty
 
 
+def needs_alert_baseline(state):
+    return state.get("_alert_mode") != ALERT_MODE
+
+
+def activate_alert_baseline(state, results, source_names, now_utc):
+    for name in source_names:
+        state[name] = results[name]
+    state["_alert_mode"] = ALERT_MODE
+    state["_baseline_at"] = now_utc.isoformat().replace("+00:00", "Z")
+    state["_recent_events"] = []
+
+
 def main():
     state, dirty = load_state()
     now_local = datetime.now(TZ).strftime("%d.%m.%Y %H:%M МСК")
@@ -927,7 +939,7 @@ def main():
     shazam_name = "Shazam Top 200 Russia"
     apple_name = "Apple Music — Shazam Charts Russia"
     results = {}
-    initialize_baseline = state.get("_alert_mode") != ALERT_MODE
+    initialize_baseline = needs_alert_baseline(state)
 
     try:
         results[shazam_name] = shazam()
@@ -944,11 +956,12 @@ def main():
         enrich_metadata(results[apple_name], results[shazam_name])
 
     if initialize_baseline and not errors and results.get(shazam_name) and results.get(apple_name):
-        for name in (shazam_name, apple_name):
-            state[name] = results[name]
-        state["_alert_mode"] = ALERT_MODE
-        state["_baseline_at"] = now_utc.isoformat().replace("+00:00", "Z")
-        state["_recent_events"] = []
+        activate_alert_baseline(
+            state,
+            results,
+            (shazam_name, apple_name),
+            now_utc,
+        )
         dirty = True
         print(f"Alert baseline initialized at {now_local}; no Telegram alert sent.")
     else:
