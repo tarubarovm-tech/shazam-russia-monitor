@@ -27,6 +27,59 @@ H = {
 }
 SHAZAM = "https://www.shazam.com/services/charts/csv/top-200/russia/"
 APPLE = "https://music.apple.com/ru/playlist/shazam-charts-russia/pl.b96cdf2da806490ea383b8a0cb45790d"
+
+# ---------------------------------------------------------------------------
+# ЧАРТЫ SHAZAM: РОССИЯ И БЕЛАРУСЬ
+#
+# ID плейлистов Apple Music берутся из данных самой страницы Shazam: там у
+# каждой страны лежит объект с тремя списками. Для России (снято 21.09.2026):
+#
+#   {"id":"RU","name":"Russia",
+#    "momentum_listid":"pl.9118895cee4242b49f2ed835e525abab",  <- Discovery
+#    "viral_listid":"pl.c23bf7c8ca5a490a91d03832dfe08fa8",     <- Viral
+#    "listid":"pl.b96cdf2da806490ea383b8a0cb45790d"}           <- Top 200
+#
+# Discovery в этих данных называется momentum_listid — поиском по слову
+# «discovery» его не найти.
+#
+# ЗАЧЕМ ДОБАВЛЕНЫ. Top 200 — это то, что УЖЕ раскручено. Discovery и Viral
+# показывают то, что набирает обороты, но в основной чарт ещё не попало:
+# на замере 21.09.2026 ни одного трека Discovery («Vibin — Wxoda»,
+# «Разве было мало — Batrai & Амая») в топ-200 не было. Для поиска
+# независимых новинок эти чарты ближе к цели.
+#
+# Сверка Apple-плейлистов с CSV-выгрузками Shazam в тот же день:
+# Discovery 10 из 10 совпали, Viral 25 из 25, порядок тот же.
+#
+# БЕЛАРУСЬ устроена беднее: momentum_listid и viral_listid = "$undefined",
+# cities и genres пустые. Есть только топ-200. Зато он не дубль российского:
+# из 200 треков 89 в топ-200 России отсутствуют (замер 21.09.2026).
+# ---------------------------------------------------------------------------
+
+SHAZAM_CSV = "https://www.shazam.com/services/charts/csv/{kind}/{country}/"
+APPLE_PLAYLIST = "https://music.apple.com/ru/playlist/x/{playlist_id}"
+
+# name -> (apple playlist id, csv kind или None, минимум треков[, страна])
+# Страна нужна только там, где чарт не российский; по умолчанию russia.
+CHART_SOURCES = {
+    "Top 200 Russia":   ("pl.b96cdf2da806490ea383b8a0cb45790d", "top-200", 100),
+    "Discovery Russia": ("pl.9118895cee4242b49f2ed835e525abab", "discovery", 5),
+    "Viral Russia":     ("pl.c23bf7c8ca5a490a91d03832dfe08fa8", "viral", 10),
+
+    # Беларусь. В данных Shazam у неё momentum_listid и viral_listid стоят
+    # "$undefined", городов и жанров нет — то есть существует ТОЛЬКО топ-200.
+    # CSV viral/discovery для belarus отдают пустышку на 84 байта.
+    "Top 200 Belarus":  ("pl.13364d34e5cf4515bcb6990bbdfcb7ec", "top-200", 50, "belarus"),
+    # Города и жанры: своих CSV у них нет, только плейлисты Apple.
+    # Отдают по ~200 треков, пересечение с федеральным топ-200 разное:
+    # Москва 125/200, Pop 80/200, Dance 32/200 (замер 21.09.2026) —
+    # то есть это действительно отдельные чарты, а не копии общего.
+    "Moscow":           ("pl.6a08116c5e6246dbace413c2a9393235", None, 20),
+    "Saint Petersburg": ("pl.1d8a86f7b04f4156986293dc79e2c0dc", None, 20),
+    "Pop Russia":       ("pl.fbbbe4d968dc45809e9d119e0a14e33a", None, 20),
+    "Hip-Hop/Rap Russia": ("pl.5140069fefc042b8bf47ecd087c95afd", None, 20),
+    "Dance Russia":     ("pl.22358fde09df4c82bf282fa09a3fdc1e", None, 20),
+}
 ITUNES_SEARCH = "https://itunes.apple.com/search"
 ITUNES_LOOKUP = "https://itunes.apple.com/lookup"
 SONGLINK_TRACK = "https://song.link/i/{track_id}"
@@ -155,8 +208,14 @@ def get(url, **kwargs):
     return r
 
 
-def shazam():
-    text = get(SHAZAM).content.decode("utf-8-sig", errors="replace")
+def shazam(url=None, min_tracks=150, limit=200):
+    """
+    Треки из CSV-выгрузки чарта Shazam.
+
+    url и min_tracks задаются для коротких чартов: Viral отдаёт 25 позиций,
+    Discovery — 10, и штатный порог 150 их отбрасывал бы как «слишком мало».
+    """
+    text = get(url or SHAZAM).content.decode("utf-8-sig", errors="replace")
     lines = text.splitlines()
     i = next(
         (i for i, x in enumerate(lines) if x.lstrip("\ufeff").strip().lower().startswith("rank,artist,title")),
@@ -171,9 +230,9 @@ def shazam():
         if low.get("title"):
             label = low.get("label") or low.get("record label") or low.get("recordlabel") or ""
             out.append(clean_track(low["title"], low.get("artist", ""), label))
-    if len(out) < 150:
+    if len(out) < min_tracks:
         raise RuntimeError(f"получено только {len(out)} треков")
-    return out[:200]
+    return out[:limit]
 
 
 def artist_name(value):
@@ -462,8 +521,15 @@ def enrich_metadata(tracks, fallback):
     return tracks
 
 
-def apple(fallback=None):
-    page = get(APPLE).content.decode("utf-8", errors="replace")
+def apple(fallback=None, url=None, min_tracks=100, limit=200):
+    """
+    Треки из плейлиста Apple Music.
+
+    url задаётся для коротких чартов (Discovery — 10 позиций, Viral — 25,
+    города — 50): для них порог min_tracks свой, иначе штатная проверка
+    «получено только N треков» валит заведомо короткий плейлист.
+    """
+    page = get(url or APPLE).content.decode("utf-8", errors="replace")
     candidates = []
 
     for payload in apple_embedded_payloads(page):
@@ -471,12 +537,14 @@ def apple(fallback=None):
 
     out = merge_candidates(candidates)
     out = enrich_metadata(out, fallback)
-    if len(out) < 100:
+    if len(out) < min_tracks:
         raise RuntimeError(f"получено только {len(out)} треков")
-    artist_count = sum(bool(x.get("artist")) for x in out[:200])
-    if artist_count < 100:
+    # У коротких чартов и порог распознавания исполнителя должен быть ниже.
+    checked = out[:limit]
+    artist_count = sum(bool(x.get("artist")) for x in checked)
+    if artist_count < max(1, min(min_tracks, len(checked)) // 2):
         raise RuntimeError(f"исполнитель распознан только у {artist_count} треков")
-    return out[:200]
+    return checked
 
 
 def normalized_tracks(items):
@@ -1916,6 +1984,55 @@ def main():
             dirty = True
     except Exception as exc:
         errors.append(f"{shazam_name}: {exc}")
+
+    # Остальные чарты Shazam по России: Discovery, Viral, города, жанры.
+    # Top 200 уже разобран выше двумя источниками (Apple + CSV), поэтому
+    # здесь он пропускается.
+    #
+    # Реестр треков общий на все источники: трек, уже показанный из одного
+    # чарта, из другого повторно не прилетит (TERMINAL_TRACK_STATUSES).
+    # Поэтому добавление источников НЕ множит алерты — оно лишь расширяет
+    # охват: то, что попало в Discovery, но не дошло до Top 200, теперь
+    # тоже будет замечено.
+    for chart_name, config in CHART_SOURCES.items():
+        if chart_name == "Top 200 Russia":
+            continue
+
+        playlist_id, csv_kind, min_tracks = config[0], config[1], config[2]
+        country = config[3] if len(config) > 3 else "russia"
+
+        source_name = f"Shazam {chart_name}"
+        tracks = None
+
+        # CSV точнее: в нём есть лейбл, которого в плейлисте Apple нет.
+        if csv_kind:
+            try:
+                tracks = shazam(
+                    url=SHAZAM_CSV.format(kind=csv_kind, country=country),
+                    min_tracks=min_tracks,
+                    limit=200,
+                )
+            except Exception as exc:
+                print(f"{source_name}: CSV недоступен ({exc}), пробую Apple")
+
+        if tracks is None:
+            try:
+                tracks = apple(
+                    url=APPLE_PLAYLIST.format(playlist_id=playlist_id),
+                    min_tracks=min_tracks,
+                    limit=200,
+                )
+            except Exception as exc:
+                errors.append(f"{source_name}: {exc}")
+                continue
+
+        try:
+            if apple_current:
+                enrich_metadata(tracks, apple_current)
+            if process_source(state, source_name, tracks, now_local, now_utc):
+                dirty = True
+        except Exception as exc:
+            errors.append(f"{source_name}: {exc}")
 
     for message in errors:
         print(message)
