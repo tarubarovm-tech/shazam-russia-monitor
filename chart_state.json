@@ -2010,11 +2010,7 @@
       "at": "2026-09-21T11:26:34.950365Z"
     }
   },
-  "_recent_events": [
-    {
-      "fingerprint": "4e7be83422d488ad96522f1b03344a715a792e6fcef210b82b5e6eb1c41f1c3b",
-      "source": "Apple Music — Shazam Charts Russia",
-      "at": "2026-09-21T11:26:34.950365Z"
-    }
-  ]
+  "_recent_events": [],
+  "_alert_mode": "new_tracks_without_yandex_v1",
+  "_baseline_at": "2026-09-21T12:53:11.547298Z"
 }
