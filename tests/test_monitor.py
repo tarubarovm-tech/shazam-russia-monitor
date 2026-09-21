@@ -108,12 +108,19 @@ class MonitorTests(unittest.TestCase):
         self.assertIn("https://music.yandex.ru/track/129617880", urls)
         self.assertIn("https://music.yandex.ru/album/1/track/2?utm_source=test", urls)
 
-    def _itunes_source(self, track_id=1761054509, title="Вены-реки", artist="Анастасия Стоцкая"):
+    def _itunes_source(
+        self,
+        track_id=1761054509,
+        title="Вены-реки",
+        artist="Анастасия Стоцкая",
+        track_url="https://music.apple.com/ru/song/example/1761054509",
+    ):
         return {
             "item": {
                 "trackId": track_id,
                 "trackName": title,
                 "artistName": artist,
+                "trackViewUrl": track_url,
             },
             "country": "ru",
             "quality": {
@@ -152,6 +159,10 @@ class MonitorTests(unittest.TestCase):
                 result = monitor.check_yandex_track(track)
         self.assertEqual(result["status"], "not_confirmed")
         self.assertEqual(result["url"], "")
+        self.assertEqual(
+            result["apple_url"],
+            "https://music.apple.com/ru/song/example/1761054509",
+        )
 
     def test_yandex_songlink_title_mismatch_is_uncertain(self):
         track = {"title": "Expected Song", "artist": "Artist", "label": ""}
@@ -242,6 +253,46 @@ class MonitorTests(unittest.TestCase):
         self.assertIn("Яндекс: не подтверждён", message)
         self.assertNotIn("УШЛИ", message)
         self.assertNotIn("ИЗМЕНЕНИЯ ПОЗИЦИЙ", message)
+
+    def test_track_open_url_prefers_apple_music(self):
+        info = {
+            "apple_url": "https://music.apple.com/ru/song/song/123",
+            "source_url": "https://song.link/i/123",
+        }
+        self.assertEqual(
+            monitor.track_open_url(info),
+            "https://music.apple.com/ru/song/song/123",
+        )
+
+    def test_track_open_url_falls_back_to_songlink(self):
+        info = {
+            "apple_url": "",
+            "source_url": "https://song.link/i/123",
+        }
+        self.assertEqual(
+            monitor.track_open_url(info),
+            "https://song.link/i/123",
+        )
+
+    def test_new_without_yandex_report_contains_track_link(self):
+        selected = {"title": "Missing", "artist": "Artist", "label": "Label"}
+        yandex_info = {
+            monitor.cache_key(selected): {
+                "status": "not_confirmed",
+                "apple_url": "https://music.apple.com/ru/song/song/123",
+                "source_url": "https://song.link/i/123",
+            },
+        }
+        message = monitor.report_new_without_yandex(
+            "Shazam Top 200 Russia",
+            [(17, "missing", selected)],
+            "21.09.2026 15:00 МСК",
+            yandex_info,
+        )
+        self.assertIn(
+            "🔗 Открыть трек: https://music.apple.com/ru/song/song/123",
+            message,
+        )
 
     def test_alert_baseline_activation_memorizes_current_charts(self):
         state = {
