@@ -3,7 +3,6 @@ import json
 import re
 import sys
 from pathlib import Path
-from urllib.parse import quote, unquote, urlparse, parse_qs
 
 import requests
 
@@ -17,57 +16,73 @@ CASES = [
 ]
 
 
+def itunes_match(track):
+    term = f"{track['title']} {track['artist']}"
+    data = monitor.get(
+        monitor.ITUNES_SEARCH,
+        params={
+            "term": term,
+            "media": "music",
+            "entity": "song",
+            "country": "ru",
+            "limit": 10,
+        },
+        timeout=15,
+    ).json()
+    expected_title = monitor.match_id(track["title"])
+    for item in data.get("results", []):
+        if monitor.match_id(item.get("trackName", "")) != expected_title:
+            continue
+        if not monitor.artist_matches(track["artist"], item.get("artistName", "")):
+            continue
+        return item
+    return None
+
+
 def extract_yandex_urls(text):
-    text = html.unescape(text)
-    urls = set()
-
+    text = html.unescape(text).replace("\\/", "/")
+    urls = []
     for raw in re.findall(r'https?://[^"\'<>\s]+', text):
-        candidate = unquote(raw.replace("\\u0026", "&").replace("\\/", "/"))
-        if "music.yandex." in candidate:
-            urls.add(candidate)
+        if "music.yandex." in raw and raw not in urls:
+            urls.append(raw)
+    return urls
 
-        if "duckduckgo.com/l/?" in candidate:
-            qs = parse_qs(urlparse(candidate).query)
-            target = unquote(qs.get("uddg", [""])[0])
-            if "music.yandex." in target:
-                urls.add(target)
-
-    return sorted(urls)
-
-
-ENGINES = {
-    "duckduckgo": lambda q: (
-        "https://html.duckduckgo.com/html/?q=" + quote(q),
-        {"User-Agent": monitor.H["User-Agent"]},
-    ),
-    "bing": lambda q: (
-        "https://www.bing.com/search?q=" + quote(q),
-        {"User-Agent": monitor.H["User-Agent"], "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8"},
-    ),
-    "yandex_web": lambda q: (
-        "https://yandex.ru/search/?text=" + quote(q),
-        {"User-Agent": monitor.H["User-Agent"], "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8"},
-    ),
-}
 
 out = []
+failed = False
 for track in CASES:
-    q = f'site:music.yandex.ru/album "{track["title"]}" "{track["artist"]}"'
-    record = {"track": track, "query": q, "engines": {}}
-    for name, builder in ENGINES.items():
-        url, headers = builder(q)
-        try:
-            r = requests.get(url, headers=headers, timeout=20, allow_redirects=True)
-            urls = extract_yandex_urls(r.text)
-            record["engines"][name] = {
-                "status": r.status_code,
-                "body_len": len(r.text),
-                "urls": urls[:10],
-                "has_title": monitor.match_id(track["title"]) in monitor.match_id(r.text),
-                "has_artist": monitor.match_id(track["artist"]) in monitor.match_id(r.text),
-            }
-        except Exception as exc:
-            record["engines"][name] = {"error": str(exc)}
-    out.append(record)
+    item = itunes_match(track)
+    if not item or not item.get("trackId"):
+        out.append({"track": track, "error": "no verified iTunes track id"})
+        failed = True
+        continue
+
+    url = f"https://song.link/i/{item['trackId']}"
+    r = requests.get(
+        url,
+        headers={
+            "User-Agent": monitor.H["User-Agent"],
+            "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+        },
+        timeout=30,
+        allow_redirects=True,
+    )
+    body = r.text
+    out.append({
+        "track": track,
+        "itunes_track_id": item["trackId"],
+        "status": r.status_code,
+        "final_url": r.url,
+        "body_len": len(body),
+        "has_title": monitor.match_id(track["title"]) in monitor.match_id(body),
+        "has_artist": monitor.match_id(track["artist"]) in monitor.match_id(body),
+        "has_yandex_word": "yandex" in body.casefold(),
+        "yandex_urls": extract_yandex_urls(body)[:10],
+        "prefix": body[:250],
+    })
+    if r.status_code >= 400:
+        failed = True
 
 print(json.dumps(out, ensure_ascii=False, indent=2))
+if failed:
+    sys.exit(1)
