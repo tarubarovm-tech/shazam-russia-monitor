@@ -37,8 +37,9 @@ YANDEX_CACHE_SECONDS = {
     "error": 10 * 60,
 }
 SONGLINK_RETRIES = 2
-ALERT_MODE = "new_tracks_without_yandex_v1"
+ALERT_MODE = "apple_primary_shazam_fallback_v1"
 REPORT_YANDEX_STATUSES = {"not_confirmed"}
+TERMINAL_TRACK_STATUSES = {"baseline", "alerted", "yandex_found"}
 _ITUNES_MATCH_MEMO = {}
 
 
@@ -851,6 +852,95 @@ def select_new_without_yandex(delta, yandex_info):
     return selected
 
 
+def track_registry_identity(track):
+    title = title_core(track.get("title", "")) or match_id(track.get("title", ""))
+    artists = sorted(artist_parts(track.get("artist", "")))
+    return f"{title}\x1f{'|'.join(artists)}"
+
+
+def matching_registry_entry(state, track):
+    registry = state.get("_track_registry", {})
+    exact_key = track_registry_identity(track)
+    if exact_key in registry:
+        return exact_key, registry[exact_key]
+
+    wanted_title = title_core(track.get("title", "")) or match_id(track.get("title", ""))
+    wanted_artist = repair_text(track.get("artist", ""))
+    for key, entry in registry.items():
+        if not isinstance(entry, dict):
+            continue
+        entry_title = title_core(entry.get("title", "")) or match_id(entry.get("title", ""))
+        if entry_title != wanted_title:
+            continue
+        entry_artist = repair_text(entry.get("artist", ""))
+        if not wanted_artist or not entry_artist:
+            return key, entry
+        if artist_match_score(wanted_artist, [entry_artist]) >= 0.90:
+            return key, entry
+    return None, None
+
+
+def track_registry_status(state, track):
+    _, entry = matching_registry_entry(state, track)
+    return entry.get("status") if isinstance(entry, dict) else None
+
+
+def set_track_registry_status(state, track, status, source, now_utc):
+    registry = state.setdefault("_track_registry", {})
+    existing_key, existing = matching_registry_entry(state, track)
+    key = existing_key or track_registry_identity(track)
+    registry[key] = {
+        "status": status,
+        "source": source,
+        "title": repair_text(track.get("title", "")),
+        "artist": repair_text(track.get("artist", "")),
+        "at": now_utc.isoformat().replace("+00:00", "Z"),
+    }
+    if isinstance(existing, dict) and existing.get("first_source"):
+        registry[key]["first_source"] = existing["first_source"]
+    else:
+        registry[key]["first_source"] = source
+
+    if len(registry) > 2500:
+        newest = sorted(
+            registry.items(),
+            key=lambda item: parse_utc(item[1].get("at"))
+            or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )[:2000]
+        state["_track_registry"] = dict(newest)
+
+
+def eligible_new_entries(state, delta):
+    result = []
+    for entry in delta.get("added", []):
+        _, _, track = entry
+        status = track_registry_status(state, track)
+        if status not in TERMINAL_TRACK_STATUSES:
+            result.append(entry)
+    return result
+
+
+def apply_yandex_outcomes(state, source, entries, yandex_info, now_utc):
+    selected = []
+    for entry in entries:
+        _, _, track = entry
+        info = (yandex_info or {}).get(cache_key(track), {})
+        status = info.get("status")
+        if status == "found":
+            set_track_registry_status(state, track, "yandex_found", source, now_utc)
+        elif status in REPORT_YANDEX_STATUSES:
+            selected.append(entry)
+        else:
+            set_track_registry_status(state, track, "pending", source, now_utc)
+    return selected
+
+
+def mark_alerted(state, source, entries, now_utc):
+    for _, _, track in entries:
+        set_track_registry_status(state, track, "alerted", source, now_utc)
+
+
 def track_open_url(info):
     info = info or {}
     return repair_text(info.get("apple_url", "")) or repair_text(info.get("source_url", ""))
@@ -935,12 +1025,95 @@ def needs_alert_baseline(state):
     return state.get("_alert_mode") != ALERT_MODE
 
 
-def activate_alert_baseline(state, results, source_names, now_utc):
-    for name in source_names:
-        state[name] = results[name]
+def reset_alert_mode(state, now_utc):
+    if not needs_alert_baseline(state):
+        return False
     state["_alert_mode"] = ALERT_MODE
     state["_baseline_at"] = now_utc.isoformat().replace("+00:00", "Z")
+    state["_source_baselines"] = {}
+    state["_track_registry"] = {}
     state["_recent_events"] = []
+    return True
+
+
+def source_is_baselined(state, source_name):
+    return source_name in state.get("_source_baselines", {})
+
+
+def baseline_source(state, source_name, tracks, now_utc):
+    state[source_name] = tracks
+    baselines = state.setdefault("_source_baselines", {})
+    baselines[source_name] = now_utc.isoformat().replace("+00:00", "Z")
+    for track in tracks:
+        set_track_registry_status(state, track, "baseline", source_name, now_utc)
+
+
+def activate_alert_baseline(state, results, source_names, now_utc):
+    reset_alert_mode(state, now_utc)
+    for name in source_names:
+        baseline_source(state, name, results[name], now_utc)
+
+
+def process_source(state, source_name, current, now_local, now_utc):
+    if not source_is_baselined(state, source_name):
+        baseline_source(state, source_name, current, now_utc)
+        print(
+            f"{source_name}: baseline initialized with {len(current)} tracks; "
+            "no Telegram alert sent."
+        )
+        return True
+
+    old = state.get(source_name)
+    dirty = False
+    if old:
+        delta = make_delta(old, current)
+        if delta["added"]:
+            candidates = eligible_new_entries(state, added_only_delta(delta))
+            if candidates:
+                candidate_delta = {"added": candidates, "gone": [], "moved": []}
+                enrich_report_labels(state, candidate_delta, now_utc)
+                yandex_info = enrich_report_yandex(state, candidate_delta, now_utc)
+                selected = apply_yandex_outcomes(
+                    state,
+                    source_name,
+                    candidates,
+                    yandex_info,
+                    now_utc,
+                )
+                dirty = True
+
+                if selected:
+                    filtered_delta = {"added": selected, "gone": [], "moved": []}
+                    fingerprint = event_fingerprint(filtered_delta)
+                    if recent_duplicate(state, fingerprint, now_utc):
+                        mark_alerted(state, source_name, selected, now_utc)
+                        print(f"Duplicate new-track alert suppressed for {source_name}")
+                    else:
+                        send(
+                            report_new_without_yandex(
+                                source_name,
+                                selected,
+                                now_local,
+                                yandex_info,
+                            )
+                        )
+                        mark_alerted(state, source_name, selected, now_utc)
+                        remember_event(state, fingerprint, source_name, now_utc)
+                else:
+                    print(
+                        f"{source_name}: {len(candidates)} candidate track(s), "
+                        "none require an alert."
+                    )
+            else:
+                print(
+                    f"{source_name}: {len(delta['added'])} added track(s), "
+                    "all already resolved by the primary/fallback registry."
+                )
+
+    if old != current:
+        state[source_name] = current
+        dirty = True
+    return dirty
 
 
 def main():
@@ -949,68 +1122,29 @@ def main():
     now_utc = datetime.now(timezone.utc)
     errors = []
 
-    shazam_name = "Shazam Top 200 Russia"
     apple_name = "Apple Music — Shazam Charts Russia"
-    results = {}
-    initialize_baseline = needs_alert_baseline(state)
+    shazam_name = "Shazam Top 200 Russia"
 
-    try:
-        results[shazam_name] = shazam()
-    except Exception as exc:
-        errors.append(f"{shazam_name}: {exc}")
+    if reset_alert_mode(state, now_utc):
+        dirty = True
 
+    apple_current = None
     try:
-        results[apple_name] = apple(results.get(shazam_name))
+        apple_current = apple()
+        if process_source(state, apple_name, apple_current, now_local, now_utc):
+            dirty = True
     except Exception as exc:
         errors.append(f"{apple_name}: {exc}")
 
-    if results.get(shazam_name) and results.get(apple_name):
-        enrich_metadata(results[shazam_name], results[apple_name])
-        enrich_metadata(results[apple_name], results[shazam_name])
-
-    if initialize_baseline and not errors and results.get(shazam_name) and results.get(apple_name):
-        activate_alert_baseline(
-            state,
-            results,
-            (shazam_name, apple_name),
-            now_utc,
-        )
-        dirty = True
-        print(f"Alert baseline initialized at {now_local}; no Telegram alert sent.")
-    else:
-        for name in (shazam_name, apple_name):
-            current = results.get(name)
-            if current is None:
-                continue
-            try:
-                old = state.get(name)
-                if old:
-                    delta = make_delta(old, current)
-                    if delta["added"]:
-                        new_delta = added_only_delta(delta)
-                        enrich_report_labels(state, new_delta, now_utc)
-                        yandex_info = enrich_report_yandex(state, new_delta, now_utc)
-                        selected = select_new_without_yandex(new_delta, yandex_info)
-
-                        if selected:
-                            filtered_delta = {"added": selected, "gone": [], "moved": []}
-                            fingerprint = event_fingerprint(filtered_delta)
-                            if recent_duplicate(state, fingerprint, now_utc):
-                                print(f"Duplicate new-track alert suppressed for {name}")
-                            else:
-                                send(report_new_without_yandex(name, selected, now_local, yandex_info))
-                                remember_event(state, fingerprint, name, now_utc)
-                                dirty = True
-                        else:
-                            print(
-                                f"{name}: {len(delta['added'])} new track(s), "
-                                "but all were confirmed on Yandex or could not be classified as missing."
-                            )
-                if old != current:
-                    state[name] = current
-                    dirty = True
-            except Exception as exc:
-                errors.append(f"{name}: {exc}")
+    shazam_current = None
+    try:
+        shazam_current = shazam()
+        if apple_current:
+            enrich_metadata(shazam_current, apple_current)
+        if process_source(state, shazam_name, shazam_current, now_local, now_utc):
+            dirty = True
+    except Exception as exc:
+        errors.append(f"{shazam_name}: {exc}")
 
     for message in errors:
         print(message)
