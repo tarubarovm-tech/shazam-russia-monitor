@@ -17,8 +17,18 @@ def main():
     }
 
     temp_state = {}
-    monitor.enrich_report_labels(temp_state, delta, now_utc)
-    yandex_info = monitor.enrich_report_yandex(temp_state, delta, now_utc)
+    yandex_info = {}
+
+    for start in range(0, len(delta["added"]), 30):
+        chunk = {
+            "added": delta["added"][start:start + 30],
+            "gone": [],
+            "moved": [],
+        }
+        monitor.enrich_report_labels(temp_state, chunk, now_utc)
+        yandex_info.update(
+            monitor.enrich_report_yandex(temp_state, chunk, now_utc)
+        )
 
     counts = {}
     verified_missing = []
