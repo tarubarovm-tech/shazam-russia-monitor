@@ -241,7 +241,7 @@ class MonitorTests(unittest.TestCase):
     def test_new_without_yandex_report_contains_only_selected_tracks(self):
         selected = {"title": "Missing", "artist": "Artist", "label": "Label"}
         yandex_info = {
-            monitor.cache_key(selected): {"status": "not_confirmed"},
+            monitor.cache_key(selected): {"status": "verified_missing"},
         }
         message = monitor.report_new_without_yandex(
             "Shazam Top 200 Russia",
@@ -420,7 +420,7 @@ class MonitorTests(unittest.TestCase):
         ]
         info = {
             monitor.cache_key(found): {"status": "found"},
-            monitor.cache_key(missing): {"status": "not_confirmed"},
+            monitor.cache_key(missing): {"status": "verified_missing"},
             monitor.cache_key(pending): {"status": "error"},
         }
         selected = monitor.apply_yandex_outcomes(
