@@ -15,6 +15,19 @@ CASES = [
     {"title": "Вены-реки", "artist": "Анастасия Стоцкая"},
 ]
 
+def snippets(body, needle, radius=260, limit=4):
+    out = []
+    low = body.casefold()
+    target = needle.casefold()
+    start = 0
+    while len(out) < limit:
+        pos = low.find(target, start)
+        if pos < 0:
+            break
+        out.append(body[max(0, pos-radius):pos+len(needle)+radius])
+        start = pos + len(target)
+    return out
+
 out = []
 failed = False
 for track in CASES:
@@ -30,19 +43,27 @@ for track in CASES:
         allow_redirects=True,
     )
     body = r.text
-    has_title = monitor.match_id(track["title"]) in monitor.match_id(body)
-    has_artist = monitor.match_id(track["artist"]) in monitor.match_id(body)
-    track_links = sorted(set(re.findall(r"/album/\d+/track/\d+", body)))
-    out.append({
+    plain_links = sorted(set(re.findall(r"/album/\d+/track/\d+", body)))
+    escaped_links = sorted(set(
+        m.replace("\\/", "/")
+        for m in re.findall(r"\\/album\\/\d+\\/track\\/\d+", body)
+    ))
+    result = {
         "track": track,
         "status": r.status_code,
-        "final_url": r.url,
         "body_len": len(body),
-        "has_title": has_title,
-        "has_artist": has_artist,
-        "track_links": track_links[:10],
-        "prefix": body[:200],
-    })
+        "plain_links": plain_links[:10],
+        "escaped_links": escaped_links[:10],
+        "title_snippets": snippets(body, track["title"]),
+        "artist_snippets": snippets(body, track["artist"]),
+        "markers": {
+            "__next_data__": "__NEXT_DATA__" in body,
+            "tracks_results": '"tracks"' in body and '"results"' in body,
+            "artists": '"artists"' in body,
+            "search_page": "/search" in body,
+        },
+    }
+    out.append(result)
     if r.status_code >= 400:
         failed = True
 
