@@ -92,12 +92,19 @@ def latinize_ru(value):
     return match_id(value).translate(_RU_LATIN)
 
 
-def clean_track(title, artist="", label=""):
-    return {
+def clean_track(title, artist="", label="", apple_track_id="", apple_url=""):
+    track = {
         "title": repair_text(title),
         "artist": repair_text(artist),
         "label": repair_text(label),
     }
+    apple_track_id = repair_text(apple_track_id)
+    apple_url = repair_text(apple_url)
+    if apple_track_id:
+        track["apple_track_id"] = apple_track_id
+    if apple_url:
+        track["apple_url"] = apple_url
+    return track
 
 
 def yandex_status_text(info):
@@ -273,7 +280,19 @@ def _flat_apple_track(node):
         or label_name(node.get("recordLabelName"))
         or label_name(node.get("label"))
     )
-    return clean_track(title, artist, label)
+    apple_url = repair_text(
+        node.get("url")
+        or node.get("href")
+        or node.get("shareUrl")
+        or ""
+    )
+    return clean_track(
+        title,
+        artist,
+        label,
+        apple_track_id=store_id,
+        apple_url=apple_url,
+    )
 
 
 def collect_apple_songs(node, out):
@@ -287,11 +306,18 @@ def collect_apple_songs(node, out):
                 or "durationInMillis" in attrs
             )
             if is_song and attrs.get("name"):
+                play_id = repair_text(
+                    play_params.get("id")
+                    or node.get("id")
+                    or ""
+                )
                 out.append(
                     clean_track(
                         attrs.get("name"),
                         attrs.get("artistName", ""),
                         label_from_node(node),
+                        apple_track_id=play_id if play_id.isdigit() else "",
+                        apple_url=attrs.get("url", ""),
                     )
                 )
 
@@ -419,6 +445,8 @@ def merge_candidates(candidates):
                 track.get("title", ""),
                 track.get("artist", ""),
                 track.get("label", ""),
+                apple_track_id=track.get("apple_track_id", ""),
+                apple_url=track.get("apple_url", ""),
             )
             by_title[title] = item
             ordered.append(item)
@@ -427,6 +455,10 @@ def merge_candidates(candidates):
                 existing["artist"] = repair_text(track["artist"])
             if not existing.get("label") and track.get("label"):
                 existing["label"] = repair_text(track["label"])
+            if not existing.get("apple_track_id") and track.get("apple_track_id"):
+                existing["apple_track_id"] = repair_text(track["apple_track_id"])
+            if not existing.get("apple_url") and track.get("apple_url"):
+                existing["apple_url"] = repair_text(track["apple_url"])
     return ordered
 
 
@@ -472,7 +504,13 @@ def normalized_tracks(items):
     if not isinstance(items, list):
         return items
     return [
-        clean_track(x.get("title", ""), x.get("artist", ""), x.get("label", ""))
+        clean_track(
+            x.get("title", ""),
+            x.get("artist", ""),
+            x.get("label", ""),
+            apple_track_id=x.get("apple_track_id", ""),
+            apple_url=x.get("apple_url", ""),
+        )
         for x in items
         if isinstance(x, dict)
     ]
@@ -669,7 +707,8 @@ def itunes_candidate_quality(track, item):
 
 
 def find_itunes_track(track):
-    key = cache_key(track)
+    native_id = repair_text(track.get("apple_track_id", ""))
+    key = f"{cache_key(track)}\x1f{native_id}"
     if key in _ITUNES_MATCH_MEMO:
         return _ITUNES_MATCH_MEMO[key]
 
@@ -678,6 +717,43 @@ def find_itunes_track(track):
     if not title:
         _ITUNES_MATCH_MEMO[key] = None
         return None
+
+    if native_id.isdigit():
+        for country in ("ru", "us"):
+            try:
+                data = get(
+                    ITUNES_LOOKUP,
+                    params={
+                        "id": native_id,
+                        "entity": "song",
+                        "country": country,
+                    },
+                    timeout=15,
+                ).json()
+            except (requests.RequestException, ValueError):
+                continue
+
+            for item in data.get("results", []):
+                if not isinstance(item, dict):
+                    continue
+                if str(item.get("trackId", "")) != native_id:
+                    continue
+                quality = itunes_candidate_quality(track, item)
+                if quality["title_score"] < 0.80:
+                    continue
+                if artist and quality["artist_score"] < 0.60:
+                    continue
+                candidate = {
+                    "item": item,
+                    "country": country,
+                    "quality": {
+                        **quality,
+                        "status": "found",
+                        "native_id": True,
+                    },
+                }
+                _ITUNES_MATCH_MEMO[key] = candidate
+                return candidate
 
     term = " ".join(x for x in (title, artist) if x)
     best = None
