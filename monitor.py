@@ -47,6 +47,12 @@ YANDEX_CACHE_SECONDS = {
 SONGLINK_RETRIES = 2
 ALERT_MODE = "apple_primary_shazam_fallback_v1"
 REPORT_YANDEX_STATUSES = {"verified_missing"}
+
+# Статусы, при которых мы ТОЧНО знаем: трек на Яндексе есть — и только при них
+# молчим. Всё остальное (включая «не смогли проверить») уходит человеку.
+# «found» — старый путь через song.link/Musicfetch, «yandex_present» — прямая
+# проверка через API Яндекса (yandex_direct).
+YANDEX_PRESENT_STATUSES = {"found", "yandex_present"}
 TERMINAL_TRACK_STATUSES = {"baseline", "alerted", "yandex_found", "major_label"}
 _ITUNES_MATCH_MEMO = {}
 _MUSICFETCH_LOCK = threading.Lock()
@@ -101,14 +107,19 @@ def clean_track(title, artist="", label=""):
 
 
 def yandex_status_text(info):
-    status = (info or {}).get("status")
+    info = info or {}
+    status = info.get("status")
+    direct = info.get("verification") == "yandex_api"
+    if status == "verified_missing" and direct:
+        return "🟢 Яндекс: НЕТ (прямая проверка)"
     return {
         "found": "🟡 Яндекс: есть",
-        "not_confirmed": "🟠 Яндекс: не удалось проверить",
+        "yandex_present": "🟡 Яндекс: есть (прямая проверка)",
+        "not_confirmed": "🟠 Яндекс: не удалось проверить — глянь руками",
         "verified_missing": "⚪ Яндекс: не найден (3 проверки)",
-        "uncertain": "🟠 Яндекс: неоднозначно",
-        "error": "⚠️ Яндекс: проверка недоступна",
-    }.get(status, "⚠️ Яндекс: не проверен")
+        "uncertain": "🟠 Яндекс: неоднозначно — глянь руками",
+        "error": "⚠️ Яндекс: проверка недоступна — глянь руками",
+    }.get(status, "⚠️ Яндекс: не проверен — глянь руками")
 
 
 def display_track(track, yandex_info=None):
@@ -993,6 +1004,14 @@ def musicfetch_verify_yandex(track, apple_url):
             **common,
         }
 
+    # URL lookup не всегда отдаёт лейбл и дистрибьютора, а ISRC lookup —
+    # отдаёт. Без этого подмешивания мейджор, видимый только на втором шаге,
+    # терялся, и трек уходил в алерт как независимый.
+    if not common["musicfetch_label"]:
+        common["musicfetch_label"] = repair_text(isrc_result.get("label", ""))
+    if not common["distributor"]:
+        common["distributor"] = repair_text(isrc_result.get("distributor", ""))
+
     yandex_url = musicfetch_yandex_url(isrc_result)
     if yandex_url:
         return {
@@ -1016,7 +1035,69 @@ def musicfetch_verify_yandex(track, apple_url):
     }
 
 
+def _direct_yandex_check(track):
+    """
+    Прямая проверка через API Яндекса. None — значит путь недоступен,
+    вызывающий должен идти старой цепочкой.
+
+    UNKNOWN от движка НЕ превращаем в «нет» и не глушим: отдаём как есть,
+    apply_yandex_outcomes покажет такой трек человеку.
+    """
+    try:
+        import yandex_direct as yd
+    except Exception:                                  # noqa: BLE001
+        return None
+    if not yd.available():
+        return None
+
+    info = yd.check_track(track.get("artist", ""), track.get("title", ""))
+    status = info.get("status")
+
+    if status == yd.PRESENT:
+        return {
+            "status": "yandex_present",
+            "url": info.get("url", ""),
+            "score": info.get("score", 0) / 100.0,
+            "verification": "yandex_api",
+            "matched_title": info.get("matched", ""),
+            "note": info.get("note", ""),
+        }
+    if status == yd.ABSENT:
+        return {
+            "status": "verified_missing",
+            "url": "",
+            "score": info.get("score", 0) / 100.0,
+            "verification": "yandex_api",
+            "evidence": ["Яндекс API: трек не найден"],
+            "note": info.get("note", ""),
+        }
+    # UNKNOWN — пусть решает старая цепочка, если она доступна; если нет,
+    # отдаём неопределённость наверх, чтобы трек попал к человеку.
+    return None if musicfetch_token() else {
+        "status": "uncertain",
+        "url": "",
+        "score": info.get("score", 0) / 100.0,
+        "verification": "yandex_api",
+        "note": info.get("note", ""),
+    }
+
+
 def check_yandex_track(track):
+    """
+    Есть ли трек на Яндексе.
+
+    Сначала — ПРЯМОЙ вопрос Яндексу (yandex_direct), если настроен YANDEX_TOKEN.
+    Один запрос к первоисточнику вместо цепочки iTunes -> song.link ->
+    Musicfetch, которая на живом пуле оставила нерешёнными 6 треков из 10
+    (включая «Пыяла» и «ты в моих мыслях навсегда», которые на Яндексе есть).
+
+    Если прямая проверка недоступна или не дала ответа — падаем на старую
+    цепочку, она остаётся рабочим запасным путём.
+    """
+    direct = _direct_yandex_check(track)
+    if direct is not None:
+        return direct
+
     source = find_itunes_track(track)
     if not source:
         return {
@@ -1390,7 +1471,34 @@ def normalize_label(value):
     return re.sub(r"\s+", " ", value).strip()
 
 
+# Односложные алиасы, которые встречаются в названиях независимых лейблов
+# («Ada Music Group», «Capitol Hill Records», «Verve Coffee Records»).
+# Для них требуем совпадение всей строки целиком или связки со словом-маркером,
+# иначе фильтр резал живые инди-релизы и они не доезжали до человека.
+_AMBIGUOUS_ALIASES = {
+    "ada", "emi", "awal", "rhino", "verve", "decca", "elektra", "erato",
+    "nonesuch", "capitol", "motown", "polydor", "parlophone", "reprise records",
+    "asylum records", "sire records", "spinnin", "masterworks", "legacy recordings",
+}
+
+# Слова, соседство с которыми подтверждает, что это действительно мейджор.
+_MAJOR_CONTEXT = (
+    "records", "recordings", "music", "group", "entertainment", "label",
+    "uk", "us", "international", "distribution",
+)
+
+
 def major_label_family(label):
+    """
+    К какому мейджору относится лейбл. None — независимый или неизвестный.
+
+    ВАЖНО ПРО ЦЕНУ ОШИБКИ. Ложное «это мейджор» дороже пропуска: трек молча
+    выбрасывается и человек его не увидит. Поэтому для коротких неоднозначных
+    алиасов («ada», «capitol», «verve») требуем либо точное совпадение всей
+    строки, либо явный контекст мейджора рядом. Замер 21.09.2026: без этого
+    «Ada Music Group», «Capitol Hill Records», «Verve Coffee Records» и
+    «Nonesuch Explorer» ошибочно определялись как мейджоры.
+    """
     normalized = normalize_label(label)
     if not normalized:
         return None
@@ -1398,9 +1506,26 @@ def major_label_family(label):
     padded = f" {normalized} "
     for family, aliases in MAJOR_LABEL_ALIASES.items():
         for alias in aliases:
-            needle = f" {normalize_label(alias)} "
-            if needle in padded:
-                return family
+            needle_core = normalize_label(alias)
+            needle = f" {needle_core} "
+            if needle not in padded:
+                continue
+
+            if needle_core in _AMBIGUOUS_ALIASES:
+                # Точное совпадение всей строки — точно мейджор.
+                if normalized == needle_core:
+                    return family
+                # Иначе нужен маркер мейджора рядом: «ada warner», «emi records».
+                rest = padded.replace(needle, " ", 1)
+                if any(f" {word} " in rest for word in _MAJOR_CONTEXT):
+                    # «Ada Music Group» тоже содержит «music»/«group», поэтому
+                    # одного маркера мало — требуем ещё и упоминание семьи.
+                    family_core = normalize_label(family.split()[0])
+                    if family_core in normalized:
+                        return family
+                continue
+
+            return family
     return None
 
 
@@ -1430,6 +1555,19 @@ def filter_non_major_entries(state, source, entries, now_utc, yandex_info=None):
 
 
 def apply_yandex_outcomes(state, source, entries, yandex_info, now_utc):
+    """
+    Кого пускаем в алерт по итогам проверки Яндекса.
+
+    ПРИНЦИП: лучше показать лишнее, чем потерять годное. Лишнее человек уберёт
+    руками за секунду, а то, что не доехало, он не увидит никогда.
+
+    Раньше сюда проходил ТОЛЬКО статус verified_missing, а всё остальное
+    (uncertain, not_confirmed, error) молча оседало в pending. На живом пуле
+    это 6 треков из 10, причём часть из них — настоящие новинки. Теперь
+    «не удалось проверить» тоже идёт в алерт, с пометкой «глянь руками».
+
+    Не алертим только тогда, когда точно знаем, что трек на Яндексе ЕСТЬ.
+    """
     selected = []
     for entry in entries:
         _, _, track = entry
@@ -1437,13 +1575,16 @@ def apply_yandex_outcomes(state, source, entries, yandex_info, now_utc):
         if not track.get("label") and info.get("musicfetch_label"):
             track["label"] = repair_text(info["musicfetch_label"])
             store_label_cache(state, track, track["label"], now_utc)
+
         status = info.get("status")
-        if status == "found":
+        if status in YANDEX_PRESENT_STATUSES:
+            # Единственный случай, когда молчим: Яндекс подтвердил наличие.
             set_track_registry_status(state, track, "yandex_found", source, now_utc)
-        elif status in REPORT_YANDEX_STATUSES:
-            selected.append(entry)
         else:
-            set_track_registry_status(state, track, "pending", source, now_utc)
+            # verified_missing, uncertain, not_confirmed, error, отсутствие
+            # статуса — всё это НЕ «трека нет на Яндексе доказано», но и НЕ
+            # повод промолчать. Показываем человеку.
+            selected.append(entry)
     return selected
 
 

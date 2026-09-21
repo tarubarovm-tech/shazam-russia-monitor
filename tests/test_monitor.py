@@ -408,21 +408,35 @@ class MonitorTests(unittest.TestCase):
             "baseline",
         )
 
-    def test_yandex_outcomes_create_terminal_and_pending_states(self):
+    def test_yandex_outcomes_only_silence_confirmed_presence(self):
+        """
+        Молчим ТОЛЬКО когда Яндекс подтвердил наличие трека.
+
+        Раньше в алерт проходил один verified_missing, а uncertain/error/
+        not_confirmed оседали в pending и до человека не доезжали — на живом
+        пуле это 6 треков из 10. Теперь «не смогли проверить» тоже идёт в
+        алерт: лишнее пользователь уберёт руками, потерянное не увидит никогда.
+        """
         state = {}
         now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
         found = {"title": "Found", "artist": "A", "label": ""}
         missing = {"title": "Missing", "artist": "B", "label": ""}
-        pending = {"title": "Pending", "artist": "C", "label": ""}
+        errored = {"title": "Errored", "artist": "C", "label": ""}
+        uncertain = {"title": "Uncertain", "artist": "D", "label": ""}
+        direct_present = {"title": "DirectPresent", "artist": "E", "label": ""}
         entries = [
             (1, "found", found),
             (2, "missing", missing),
-            (3, "pending", pending),
+            (3, "errored", errored),
+            (4, "uncertain", uncertain),
+            (5, "direct", direct_present),
         ]
         info = {
             monitor.cache_key(found): {"status": "found"},
             monitor.cache_key(missing): {"status": "verified_missing"},
-            monitor.cache_key(pending): {"status": "error"},
+            monitor.cache_key(errored): {"status": "error"},
+            monitor.cache_key(uncertain): {"status": "uncertain"},
+            monitor.cache_key(direct_present): {"status": "yandex_present"},
         }
         selected = monitor.apply_yandex_outcomes(
             state,
@@ -431,10 +445,37 @@ class MonitorTests(unittest.TestCase):
             info,
             now,
         )
-        self.assertEqual(selected, [(2, "missing", missing)])
+        # Подтверждённое наличие — молчим.
         self.assertEqual(monitor.track_registry_status(state, found), "yandex_found")
-        self.assertEqual(monitor.track_registry_status(state, pending), "pending")
-        self.assertIsNone(monitor.track_registry_status(state, missing))
+        self.assertEqual(
+            monitor.track_registry_status(state, direct_present), "yandex_found",
+        )
+        # Всё остальное доезжает до человека.
+        self.assertEqual(
+            selected,
+            [
+                (2, "missing", missing),
+                (3, "errored", errored),
+                (4, "uncertain", uncertain),
+            ],
+        )
+
+    def test_unverifiable_track_is_not_silently_dropped(self):
+        """Яндекс не ответил — трек обязан попасть в алерт, а не исчезнуть."""
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        track = {"title": "Unverifiable", "artist": "X", "label": ""}
+        entries = [(1, "unverifiable", track)]
+        for status in ("error", "uncertain", "not_confirmed", None):
+            with self.subTest(status=status):
+                info = {monitor.cache_key(track): {"status": status}}
+                selected = monitor.apply_yandex_outcomes(
+                    state, "Shazam Top 200 Russia", entries, info, now,
+                )
+                self.assertEqual(
+                    selected, entries,
+                    f"статус {status!r} потерял трек вместо показа человеку",
+                )
 
     def test_mark_alerted_blocks_future_fallback(self):
         state = {}
@@ -499,6 +540,43 @@ class MonitorTests(unittest.TestCase):
             monitor.major_label_family("ADA"),
             "Warner Music Group",
         )
+
+    def test_indie_labels_with_major_sounding_words_pass(self):
+        """
+        Независимые лейблы, в названии которых случайно встречается короткий
+        алиас мейджора, НЕ должны блокироваться: трек просто исчезнет, и
+        человек его не увидит. Замер 21.09.2026 — все эти строки ошибочно
+        определялись как мейджоры.
+        """
+        for label in (
+            "Ada Music Group",
+            "Capitol Hill Records",
+            "Verve Coffee Records",
+            "Nonesuch Explorer",
+            "Rhino Sound Kyiv",
+            "Adamant Records",
+            "EMIrates Sound",
+        ):
+            with self.subTest(label=label):
+                self.assertIsNone(
+                    monitor.major_label_family(label),
+                    f"{label!r} ошибочно принят за мейджор — трек будет потерян",
+                )
+
+    def test_real_majors_are_still_detected(self):
+        """Послабление для инди не должно пропускать настоящие мейджоры."""
+        cases = {
+            "ADA": "Warner Music Group",
+            "EMI": "Universal Music Group",
+            "Capitol": "Universal Music Group",
+            "AWAL": "Sony Music Entertainment",
+            "Warner Music Group / ADA": "Warner Music Group",
+            "Interscope Records": "Universal Music Group",
+            "The Orchard": "Sony Music Entertainment",
+        }
+        for label, family in cases.items():
+            with self.subTest(label=label):
+                self.assertEqual(monitor.major_label_family(label), family)
 
     def test_independent_label_is_not_classified_as_major(self):
         self.assertIsNone(
@@ -963,6 +1041,230 @@ class MonitorTests(unittest.TestCase):
         self.assertTrue(result["isrc_match"]["matches"])
         self.assertGreaterEqual(result["url_match"]["title_latin"], 0.93)
         self.assertGreaterEqual(result["isrc_match"]["title_text"], 0.99)
+
+    # ------------------------------------------------------------------
+    # Major-label detection surfaced specifically through Musicfetch/Yandex
+    # ------------------------------------------------------------------
+
+    def test_musicfetch_url_lookup_major_label_is_filtered(self):
+        """Мейджорский лейбл, найденный уже на первом (URL) запросе Musicfetch,
+        должен долетать до financial фильтра и блокировать трек."""
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        url_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600001",
+            "label": "Interscope Records",
+            "distributor": "Interscope Records",
+            "services": {},
+        }
+        isrc_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600001",
+            "services": {},
+        }
+        with patch.object(
+            monitor,
+            "musicfetch_get",
+            side_effect=[(url_result, ""), (isrc_result, "")],
+        ):
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/1?i=2",
+            )
+        self.assertEqual(result["status"], "verified_missing")
+        self.assertEqual(result["musicfetch_label"], "Interscope Records")
+
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        monitor.reset_alert_mode(state, now)
+        entry = (5, "song", track)
+        info = {monitor.cache_key(track): result}
+        selected = monitor.filter_non_major_entries(
+            state, "Apple Music — Shazam Charts Russia", [entry], now, info,
+        )
+        self.assertEqual(selected, [])
+        self.assertEqual(monitor.track_registry_status(state, track), "major_label")
+
+    def test_musicfetch_isrc_fallback_major_label_is_not_lost(self):
+        """Баг-регрессия: URL-lookup не даёт лейбл (пусто), но ISRC-lookup
+        (второй запрос) возвращает мейджорский лейбл/дистрибьютора. Текущая
+        реализация musicfetch_verify_yandex собирает `common` (и, значит,
+        musicfetch_label/distributor) ТОЛЬКО из ответа первого (URL) запроса
+        и никогда не подмешивает данные из ответа на ISRC-запрос — поэтому
+        мейджорский лейбл, видимый только на втором шаге, сейчас теряется,
+        и трек проходит фильтр как «независимый».
+        """
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        url_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600001",
+            "label": "",
+            "distributor": "",
+            "services": {},
+        }
+        isrc_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600001",
+            "label": "Interscope Records",
+            "distributor": "Interscope Records",
+            "services": {},
+        }
+        with patch.object(
+            monitor,
+            "musicfetch_get",
+            side_effect=[(url_result, ""), (isrc_result, "")],
+        ):
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/1?i=2",
+            )
+        self.assertEqual(result["status"], "verified_missing")
+
+        # Раскрывает баг: сведения о лейбле, видимые только на ISRC-шаге,
+        # должны попасть в результат — иначе фильтр мейджоров их не увидит.
+        evidence = " / ".join(
+            value for value in (result.get("musicfetch_label", ""), result.get("distributor", "")) if value
+        )
+        self.assertTrue(
+            evidence,
+            "musicfetch_verify_yandex потерял лейбл/дистрибьютора из ответа "
+            "ISRC-запроса — мейджор пройдёт мимо filter_non_major_entries",
+        )
+        self.assertIsNotNone(
+            monitor.major_label_family(evidence),
+            f"лейбл из ISRC-ответа не распознан как мейджор: {evidence!r}",
+        )
+
+        # И даже если бы данные долетели, конечная проверка — что запись
+        # реально блокируется полным фильтром, а не только определением семьи.
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        monitor.reset_alert_mode(state, now)
+        entry = (5, "song", track)
+        info = {monitor.cache_key(track): result}
+        selected = monitor.filter_non_major_entries(
+            state, "Apple Music — Shazam Charts Russia", [entry], now, info,
+        )
+        self.assertEqual(
+            selected,
+            [],
+            "трек с мейджорским лейблом, видимым только на ISRC-шаге "
+            "Musicfetch, прошёл фильтр как независимый",
+        )
+        self.assertEqual(monitor.track_registry_status(state, track), "major_label")
+
+    def test_musicfetch_sony_label_via_yandex_check_is_filtered(self):
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        url_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600002",
+            "label": "Columbia Records",
+            "distributor": "Columbia Records",
+            "services": {},
+        }
+        with patch.object(monitor, "musicfetch_get", return_value=(url_result, "")):
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/2?i=3",
+            )
+        self.assertEqual(result["status"], "verified_missing")
+
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        monitor.reset_alert_mode(state, now)
+        entry = (5, "song", track)
+        info = {monitor.cache_key(track): result}
+        selected = monitor.filter_non_major_entries(
+            state, "Apple Music — Shazam Charts Russia", [entry], now, info,
+        )
+        self.assertEqual(selected, [])
+        self.assertEqual(monitor.track_registry_status(state, track), "major_label")
+
+    def test_musicfetch_warner_distributor_via_yandex_check_is_filtered(self):
+        """Дистрибьютор из Musicfetch (не только `label`) тоже должен
+        блокировать трек, если это Warner-семья."""
+        track = {"title": "Song", "artist": "Artist", "label": "Indie Vanity Label"}
+        url_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600003",
+            "label": "",
+            "distributor": "Atlantic Records",
+            "services": {},
+        }
+        with patch.object(monitor, "musicfetch_get", return_value=(url_result, "")):
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/3?i=4",
+            )
+        self.assertEqual(result["status"], "verified_missing")
+
+        state = {}
+        now = monitor.datetime(2026, 9, 21, 12, 0, tzinfo=monitor.timezone.utc)
+        monitor.reset_alert_mode(state, now)
+        entry = (5, "song", track)
+        info = {monitor.cache_key(track): result}
+        selected = monitor.filter_non_major_entries(
+            state, "Apple Music — Shazam Charts Russia", [entry], now, info,
+        )
+        self.assertEqual(selected, [])
+        self.assertEqual(monitor.track_registry_status(state, track), "major_label")
+
+    def test_musicfetch_found_status_still_reports_major_label_evidence(self):
+        """Даже когда Musicfetch НАХОДИТ трек на Яндексе (status="found"),
+        поле label/distributor всё равно попадает в info и должно уметь
+        блокировать запись как major — на случай если её всё же передадут
+        в фильтр (например, отдельный путь alert'а на "found")."""
+        track = {"title": "Song", "artist": "Artist", "label": ""}
+        url_result = {
+            "type": "track",
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "isrc": "USABC2600004",
+            "label": "Republic Records",
+            "distributor": "Republic Records",
+            "services": {
+                "yandex": {"link": "https://music.yandex.ru/track/999"}
+            },
+        }
+        with patch.object(monitor, "musicfetch_get", return_value=(url_result, "")):
+            result = monitor.musicfetch_verify_yandex(
+                track,
+                "https://music.apple.com/ru/album/song/4?i=5",
+            )
+        self.assertEqual(result["status"], "found")
+        self.assertEqual(result["musicfetch_label"], "Republic Records")
+        self.assertIsNotNone(monitor.major_label_family(result["musicfetch_label"]))
+
+    def test_major_label_family_matches_musicfetch_style_distributor_strings(self):
+        """Значения distributor, как их реально присылает Musicfetch (частая
+        форма — просто название компании без доп. слов), должны узнаваться
+        для всех трёх семей мейджоров."""
+        cases = {
+            "Universal Music Group": "Universal Music Group",
+            "Interscope Records": "Universal Music Group",
+            "Sony Music Entertainment": "Sony Music Entertainment",
+            "The Orchard": "Sony Music Entertainment",
+            "Warner Music Group": "Warner Music Group",
+            "ADA": "Warner Music Group",
+        }
+        for distributor, expected_family in cases.items():
+            with self.subTest(distributor=distributor):
+                self.assertEqual(
+                    monitor.major_label_family(distributor),
+                    expected_family,
+                )
 
 
 if __name__ == "__main__":

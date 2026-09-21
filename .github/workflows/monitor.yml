@@ -28,6 +28,9 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           MUSICFETCH_TOKEN: ${{ secrets.MUSICFETCH_TOKEN }}
+          # Прямая сверка с Яндексом. Без него monitor.py откатывается на
+          # старую цепочку через song.link/Musicfetch.
+          YANDEX_TOKEN: ${{ secrets.YANDEX_TOKEN }}
         run: python monitor.py
       - name: Save chart state
         run: |
