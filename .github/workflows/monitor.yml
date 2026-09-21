@@ -21,6 +21,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
+      - name: Run regression tests
+        run: python -m unittest discover -s tests -v
       - name: Check charts and notify Telegram
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
