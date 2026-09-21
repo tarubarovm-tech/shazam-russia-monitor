@@ -26,7 +26,7 @@ SHAZAM = "https://www.shazam.com/services/charts/csv/top-200/russia/"
 APPLE = "https://music.apple.com/ru/playlist/shazam-charts-russia/pl.b96cdf2da806490ea383b8a0cb45790d"
 ITUNES_SEARCH = "https://itunes.apple.com/search"
 ITUNES_LOOKUP = "https://itunes.apple.com/lookup"
-YANDEX_SEARCH = "https://music.yandex.ru/handlers/music-search.jsx"
+YANDEX_SEARCH = "https://api.music.yandex.net/search"
 SCHEMA_VERSION = 4
 DUPLICATE_WINDOW_SECONDS = 6 * 60 * 60
 LABEL_CACHE_SECONDS = 30 * 24 * 60 * 60
@@ -517,7 +517,8 @@ def yandex_search_results(query):
     headers = dict(H)
     headers.update(
         {
-            "Accept": "application/json,text/plain,*/*",
+            "Accept": "application/json",
+            "Origin": "https://music.yandex.ru",
             "Referer": "https://music.yandex.ru/",
         }
     )
@@ -525,15 +526,24 @@ def yandex_search_results(query):
         try:
             response = get(
                 YANDEX_SEARCH,
-                params={"text": query, "page": 0},
+                params={
+                    "text": query,
+                    "page": 0,
+                    "type": "track",
+                    "nocorrect": "false",
+                    "perPage": 20,
+                },
                 headers=headers,
-                timeout=18,
+                timeout=12,
             )
             data = response.json()
-            tracks = data.get("tracks", {}) if isinstance(data, dict) else {}
-            items = tracks.get("items", []) if isinstance(tracks, dict) else []
+            if not isinstance(data, dict):
+                raise ValueError("Yandex Music returned non-object JSON")
+            payload = data.get("result", data)
+            tracks = payload.get("tracks", {}) if isinstance(payload, dict) else {}
+            items = tracks.get("results", []) if isinstance(tracks, dict) else []
             if not isinstance(items, list):
-                raise ValueError("Yandex Music returned an invalid tracks list")
+                raise ValueError("Yandex Music returned an invalid tracks.results list")
             return [item for item in items if isinstance(item, dict)]
         except (requests.RequestException, ValueError) as exc:
             last_error = exc
