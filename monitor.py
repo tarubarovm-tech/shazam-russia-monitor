@@ -911,21 +911,15 @@ def musicfetch_match_quality(track, result):
         artist_text /= max(1, len(expected_parts))
         artist_latin /= max(1, len(expected_parts))
 
-    title_ok = (
-        title_text >= YANDEX_MATCH_THRESHOLD
-        or title_latin >= YANDEX_MATCH_THRESHOLD
-    )
-    if expected_artist:
-        artist_ok = (
-            artist_text >= YANDEX_MATCH_THRESHOLD
-            or artist_latin >= YANDEX_MATCH_THRESHOLD
-        )
-    else:
-        artist_ok = True
-        title_ok = title_text >= 0.98 or title_latin >= 0.98
+    title_score = max(title_text, title_latin)
+    artist_score = max(artist_text, artist_latin)
+    title_ok = title_score >= YANDEX_MATCH_THRESHOLD
+    artist_ok = artist_score >= YANDEX_MATCH_THRESHOLD
 
     return {
         "matches": bool(title_ok and artist_ok),
+        "title_score": round(title_score, 4),
+        "artist_score": round(artist_score, 4),
         "title_text": round(title_text, 4),
         "title_latin": round(title_latin, 4),
         "artist_text": round(artist_text, 4),
@@ -1019,10 +1013,14 @@ def musicfetch_verify_yandex(track, apple_url):
     url_match = musicfetch_match_quality(track, url_result)
     if not url_match["matches"]:
         return {
-            "status": "not_confirmed",
+            "status": "verified_missing",
             "url": "",
-            "error": "Musicfetch URL lookup не подтвердил точный трек",
-            "match": url_match,
+            "verification": "musicfetch_url_score_mismatch",
+            "error": "Apple↔Yandex score ниже 0.80 по title или artist",
+            "url_match": url_match,
+            "evidence": [
+                "Musicfetch URL lookup: найденное сопоставление не прошло порог 0.80",
+            ],
         }
 
     common = {
@@ -1069,10 +1067,14 @@ def musicfetch_verify_yandex(track, apple_url):
     isrc_match = musicfetch_match_quality(track, isrc_result)
     if not isrc_match["matches"]:
         return {
-            "status": "not_confirmed",
+            "status": "verified_missing",
             "url": "",
-            "error": "Musicfetch ISRC lookup не подтвердил точный трек",
+            "verification": "musicfetch_isrc_score_mismatch",
+            "error": "Apple↔Yandex ISRC score ниже 0.80 по title или artist",
             "isrc_match": isrc_match,
+            "evidence": [
+                "Musicfetch ISRC lookup: найденное сопоставление не прошло порог 0.80",
+            ],
             **common,
         }
 
