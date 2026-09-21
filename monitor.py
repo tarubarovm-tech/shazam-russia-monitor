@@ -558,7 +558,7 @@ def extract_yandex_urls(page):
     pattern = (
         r"https?://music\.yandex\.(?:ru|com)/"
         r"(?:album/\d+/track/\d+|track/\d+)"
-        r"[^\"'<>\\s]*"
+        r"[^\"'<>\s]*"
     )
     for url in re.findall(pattern, text, flags=re.I):
         url = url.rstrip(".,);]")
