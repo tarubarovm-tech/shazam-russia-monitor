@@ -1,0 +1,22 @@
+name: Run private mock alert 2
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Send private mock
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: python scripts/send_mock_alert.py
