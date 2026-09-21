@@ -5,10 +5,12 @@ import io
 import json
 import os
 import re
+import time
 import unicodedata
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from difflib import SequenceMatcher
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -24,9 +26,18 @@ SHAZAM = "https://www.shazam.com/services/charts/csv/top-200/russia/"
 APPLE = "https://music.apple.com/ru/playlist/shazam-charts-russia/pl.b96cdf2da806490ea383b8a0cb45790d"
 ITUNES_SEARCH = "https://itunes.apple.com/search"
 ITUNES_LOOKUP = "https://itunes.apple.com/lookup"
-SCHEMA_VERSION = 3
+SONGLINK_TRACK = "https://song.link/i/{track_id}"
+SCHEMA_VERSION = 5
 DUPLICATE_WINDOW_SECONDS = 6 * 60 * 60
 LABEL_CACHE_SECONDS = 30 * 24 * 60 * 60
+YANDEX_CACHE_SECONDS = {
+    "found": 24 * 60 * 60,
+    "not_confirmed": 2 * 60 * 60,
+    "uncertain": 30 * 60,
+    "error": 10 * 60,
+}
+SONGLINK_RETRIES = 2
+_ITUNES_MATCH_MEMO = {}
 
 
 def repair_text(value):
@@ -48,7 +59,24 @@ def text_id(value):
 
 
 def match_id(value):
-    return re.sub(r"[^\w]+", " ", text_id(value), flags=re.UNICODE).strip()
+    value = repair_text(value).casefold().replace("ё", "е")
+    value = unicodedata.normalize("NFKD", value)
+    value = "".join(ch for ch in value if not unicodedata.combining(ch))
+    return re.sub(r"[^\w]+", " ", value, flags=re.UNICODE).strip()
+
+
+_RU_LATIN = str.maketrans({
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e",
+    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l",
+    "м": "m", "н": "n", "о": "o", "п": "p", "р": "r", "с": "s",
+    "т": "t", "у": "u", "ф": "f", "х": "kh", "ц": "ts", "ч": "ch",
+    "ш": "sh", "щ": "shch", "ы": "y", "э": "e", "ю": "yu", "я": "ya",
+    "ь": "", "ъ": "",
+})
+
+
+def latinize_ru(value):
+    return match_id(value).translate(_RU_LATIN)
 
 
 def clean_track(title, artist="", label=""):
@@ -59,12 +87,22 @@ def clean_track(title, artist="", label=""):
     }
 
 
-def display_track(track):
+def yandex_status_text(info):
+    status = (info or {}).get("status")
+    return {
+        "found": "🟡 Яндекс: есть",
+        "not_confirmed": "⚪ Яндекс: не подтверждён",
+        "uncertain": "🟠 Яндекс: неоднозначно",
+        "error": "⚠️ Яндекс: проверка недоступна",
+    }.get(status, "⚠️ Яндекс: не проверен")
+
+
+def display_track(track, yandex_info=None):
     title = repair_text(track.get("title", ""))
     artist = repair_text(track.get("artist", ""))
     label = repair_text(track.get("label", ""))
     text = title + (f" — {artist}" if artist else "")
-    return f"{text} · 🏷 {label or 'не найден'}"
+    return f"{text} · 🏷 {label or 'не найден'} · {yandex_status_text(yandex_info)}"
 
 
 def send(text):
@@ -346,30 +384,272 @@ def artist_matches(expected, actual):
     return bool(a and b and len(a & b) / min(len(a), len(b)) >= 0.5)
 
 
-def find_collection(track):
-    title = match_id(track.get("title", ""))
+def title_core(value):
+    value = repair_text(value)
+    value = re.sub(
+        r"\s*[\(\[]\s*(?:feat|ft|featuring)\.?\s+.*?[\)\]]\s*$",
+        "",
+        value,
+        flags=re.I,
+    )
+    value = re.sub(r"\s+(?:feat|ft|featuring)\.?\s+.+$", "", value, flags=re.I)
+    return match_id(value)
+
+
+def similarity(a, b):
+    a = match_id(a)
+    b = match_id(b)
+    if not a or not b:
+        return 0.0
+    if a == b:
+        return 1.0
+    direct = SequenceMatcher(None, a, b).ratio()
+    translit = SequenceMatcher(None, latinize_ru(a), latinize_ru(b)).ratio()
+    return max(direct, translit)
+
+
+def artist_parts(value):
+    value = repair_text(value)
+    value = re.sub(r"\s+(?:feat|ft|featuring)\.?\s+", ",", value, flags=re.I)
+    parts = re.split(r"\s*(?:,|&|;|×|\+)\s*", value)
+    out = []
+    for part in parts:
+        normalized = match_id(part)
+        if normalized and normalized not in out:
+            out.append(normalized)
+    return out
+
+
+def title_match_score(expected, candidate):
+    exact = similarity(expected, candidate)
+    if match_id(expected) == match_id(candidate):
+        return 1.0
+    expected_core = title_core(expected)
+    candidate_core = title_core(candidate)
+    if expected_core and expected_core == candidate_core:
+        return max(exact, 0.985)
+    return exact
+
+
+def artist_match_score(expected, actual_names):
+    expected_parts = artist_parts(expected)
+    actual = [match_id(x) for x in actual_names if match_id(x)]
+    if not expected_parts or not actual:
+        return 0.0
+
+    if len(expected_parts) == 1:
+        return max(similarity(expected_parts[0], name) for name in actual)
+
+    best_each = [
+        max(similarity(expected_part, actual_name) for actual_name in actual)
+        for expected_part in expected_parts
+    ]
+    coverage = sum(score >= 0.88 for score in best_each) / len(best_each)
+    mean_score = sum(best_each) / len(best_each)
+    primary_score = best_each[0]
+
+    expected_words = set(" ".join(expected_parts).split())
+    actual_words = set(" ".join(actual).split())
+    word_overlap = (
+        len(expected_words & actual_words) / len(expected_words)
+        if expected_words
+        else 0.0
+    )
+    return max(
+        0.55 * mean_score + 0.30 * coverage + 0.15 * primary_score,
+        0.85 * word_overlap + 0.15 * primary_score,
+    )
+
+
+def itunes_candidate_quality(track, item):
+    title_score = title_match_score(
+        track.get("title", ""),
+        item.get("trackName", ""),
+    )
+    artist_score = artist_match_score(
+        track.get("artist", ""),
+        [item.get("artistName", "")],
+    )
+
+    if not repair_text(track.get("artist", "")) and title_score >= 0.995:
+        status = "uncertain"
+    elif title_score >= 0.995 and artist_score >= 0.82:
+        status = "found"
+    elif title_score >= 0.97 and artist_score >= 0.93:
+        status = "found"
+    elif title_score >= 0.92 and artist_score >= 0.60:
+        status = "uncertain"
+    else:
+        status = "reject"
+
+    return {
+        "status": status,
+        "score": round(0.62 * title_score + 0.38 * artist_score, 4),
+        "title_score": round(title_score, 4),
+        "artist_score": round(artist_score, 4),
+    }
+
+
+def find_itunes_track(track):
+    key = cache_key(track)
+    if key in _ITUNES_MATCH_MEMO:
+        return _ITUNES_MATCH_MEMO[key]
+
+    title = repair_text(track.get("title", ""))
+    artist = repair_text(track.get("artist", ""))
     if not title:
+        _ITUNES_MATCH_MEMO[key] = None
         return None
-    artist = track.get("artist", "")
-    term = " ".join(x for x in (track.get("title", ""), artist) if x)
+
+    term = " ".join(x for x in (title, artist) if x)
+    best = None
+    best_score = -1.0
+
     for country in ("ru", "us"):
         try:
             data = get(
                 ITUNES_SEARCH,
-                params={"term": term, "media": "music", "entity": "song", "country": country, "limit": 10},
+                params={
+                    "term": term,
+                    "media": "music",
+                    "entity": "song",
+                    "country": country,
+                    "limit": 15,
+                },
                 timeout=15,
             ).json()
         except (requests.RequestException, ValueError):
             continue
+
         for item in data.get("results", []):
-            if match_id(item.get("trackName", "")) != title:
+            if not isinstance(item, dict):
                 continue
-            if not artist_matches(artist, item.get("artistName", "")):
+            quality = itunes_candidate_quality(track, item)
+            if quality["status"] == "reject":
                 continue
-            collection_id = item.get("collectionId")
-            if collection_id:
-                return str(collection_id), country
-    return None
+            score = quality["score"]
+            candidate = {
+                "item": item,
+                "country": country,
+                "quality": quality,
+            }
+            if quality["status"] == "found" and score > best_score:
+                best = candidate
+                best_score = score
+
+    _ITUNES_MATCH_MEMO[key] = best
+    return best
+
+
+def find_collection(track):
+    match = find_itunes_track(track)
+    if not match:
+        return None
+    item = match["item"]
+    collection_id = item.get("collectionId")
+    if not collection_id:
+        return None
+    return str(collection_id), match["country"]
+
+
+def extract_yandex_urls(page):
+    text = html_lib.unescape(str(page or "")).replace("\\/", "/")
+    urls = []
+    pattern = (
+        r"https?://music\.yandex\.(?:ru|com)/"
+        r"(?:album/\d+/track/\d+|track/\d+)"
+        r"[^\"'<>\s]*"
+    )
+    for url in re.findall(pattern, text, flags=re.I):
+        url = url.rstrip(".,);]")
+        if url not in urls:
+            urls.append(url)
+    return urls
+
+
+def songlink_title_matches(track, page):
+    title = match_id(track.get("title", ""))
+    if not title:
+        return False
+    text = match_id(html_lib.unescape(str(page or "")))
+    return title in text or title_core(track.get("title", "")) in text
+
+
+def check_yandex_track(track):
+    source = find_itunes_track(track)
+    if not source:
+        return {
+            "status": "uncertain",
+            "score": 0.0,
+            "url": "",
+            "error": "точный iTunes-источник не найден",
+        }
+
+    item = source["item"]
+    track_id = item.get("trackId")
+    if not track_id:
+        return {
+            "status": "uncertain",
+            "score": source["quality"]["score"],
+            "url": "",
+            "error": "у подтверждённого iTunes-трека нет trackId",
+        }
+
+    resolver_url = SONGLINK_TRACK.format(track_id=track_id)
+    last_error = None
+    for attempt in range(1, SONGLINK_RETRIES + 1):
+        try:
+            response = get(
+                resolver_url,
+                headers={
+                    "User-Agent": H["User-Agent"],
+                    "Accept-Language": H["Accept-Language"],
+                },
+                timeout=25,
+            )
+            page = response.text
+            if not songlink_title_matches(track, page):
+                return {
+                    "status": "uncertain",
+                    "score": source["quality"]["score"],
+                    "url": "",
+                    "source_url": resolver_url,
+                    "error": "Songlink не подтвердил название трека",
+                }
+
+            urls = extract_yandex_urls(page)
+            if urls:
+                return {
+                    "status": "found",
+                    "score": source["quality"]["score"],
+                    "url": urls[0],
+                    "source_url": resolver_url,
+                    "itunes_track_id": str(track_id),
+                    "matched_title": repair_text(item.get("trackName", "")),
+                    "matched_artist": repair_text(item.get("artistName", "")),
+                }
+
+            return {
+                "status": "not_confirmed",
+                "score": source["quality"]["score"],
+                "url": "",
+                "source_url": resolver_url,
+                "itunes_track_id": str(track_id),
+                "matched_title": repair_text(item.get("trackName", "")),
+                "matched_artist": repair_text(item.get("artistName", "")),
+            }
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < SONGLINK_RETRIES:
+                time.sleep(attempt)
+
+    return {
+        "status": "error",
+        "score": source["quality"]["score"],
+        "url": "",
+        "source_url": resolver_url,
+        "error": f"Songlink недоступен: {last_error}",
+    }
 
 
 def lookup_collection_labels(collections):
@@ -401,6 +681,43 @@ def lookup_collection_labels(collections):
 
 def cache_key(track):
     return f"{text_id(track.get('title', ''))}\x1f{text_id(track.get('artist', ''))}"
+
+
+def cached_yandex(state, track, now_utc):
+    entry = state.get("_yandex_cache", {}).get(cache_key(track))
+    if not isinstance(entry, dict):
+        return None
+    status = entry.get("status")
+    ttl = YANDEX_CACHE_SECONDS.get(status, 0)
+    at = parse_utc(entry.get("at"))
+    if not at or not ttl or (now_utc - at).total_seconds() > ttl:
+        return None
+    return dict(entry)
+
+
+def store_yandex_cache(state, track, info, now_utc):
+    cache = state.setdefault("_yandex_cache", {})
+    entry = {
+        "status": info.get("status", "error"),
+        "score": info.get("score", 0.0),
+        "url": info.get("url", ""),
+        "matched_title": info.get("matched_title", ""),
+        "matched_artist": info.get("matched_artist", ""),
+        "source_url": info.get("source_url", ""),
+        "itunes_track_id": info.get("itunes_track_id", ""),
+        "at": now_utc.isoformat().replace("+00:00", "Z"),
+    }
+    if info.get("error"):
+        entry["error"] = info["error"]
+    cache[cache_key(track)] = entry
+    if len(cache) > 1500:
+        newest = sorted(
+            cache.items(),
+            key=lambda item: parse_utc(item[1].get("at"))
+            or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )[:1200]
+        state["_yandex_cache"] = dict(newest)
 
 
 def cached_label(state, track, now_utc):
@@ -477,7 +794,42 @@ def enrich_report_labels(state, delta, now_utc):
             store_label_cache(state, track, label, now_utc)
 
 
-def report(name, delta, now):
+def enrich_report_yandex(state, delta, now_utc):
+    tracks = report_tracks(delta)
+    result = {}
+    unresolved = []
+
+    for track in tracks:
+        key = cache_key(track)
+        cached = cached_yandex(state, track, now_utc)
+        if cached:
+            result[key] = cached
+        else:
+            unresolved.append(track)
+
+    if unresolved:
+        workers = min(4, len(unresolved))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(check_yandex_track, track): track for track in unresolved}
+            for future in as_completed(futures):
+                track = futures[future]
+                key = cache_key(track)
+                try:
+                    info = future.result()
+                except Exception as exc:
+                    info = {
+                        "status": "error",
+                        "score": 0.0,
+                        "url": "",
+                        "error": str(exc),
+                    }
+                result[key] = info
+                store_yandex_cache(state, track, info, now_utc)
+
+    return result
+
+
+def report(name, delta, now, yandex_info=None):
     added, gone, moved = delta["added"], delta["gone"], delta["moved"]
     lines = [
         f"🔄 {name}",
@@ -485,12 +837,12 @@ def report(name, delta, now):
         f"Новых: {len(added)} | Ушло: {len(gone)} | Сменили позицию: {len(moved)}",
     ]
     if added:
-        lines += ["", "🆕 НОВЫЕ:"] + [f"#{p} {display_track(track)}" for p, _, track in added[:30]]
+        lines += ["", "🆕 НОВЫЕ:"] + [f"#{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))}" for p, _, track in added[:30]]
     if gone:
-        lines += ["", "❌ УШЛИ:"] + [f"было #{p} {display_track(track)}" for p, _, track in gone[:20]]
+        lines += ["", "❌ УШЛИ:"] + [f"было #{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))}" for p, _, track in gone[:20]]
     if moved:
         lines += ["", "📈 ИЗМЕНЕНИЯ ПОЗИЦИЙ:"] + [
-            f"{'↑' if p < old_p else '↓'} #{p} {display_track(track)} (было #{old_p})"
+            f"{'↑' if p < old_p else '↓'} #{p} {display_track(track, (yandex_info or {}).get(cache_key(track)))} (было #{old_p})"
             for _, p, old_p, _, track in moved[:25]
         ]
     return "\n".join(lines)
@@ -592,7 +944,8 @@ def main():
                         print(f"Duplicate chart event suppressed for {name}")
                     else:
                         enrich_report_labels(state, delta, now_utc)
-                        send(report(name, delta, now_local))
+                        yandex_info = enrich_report_yandex(state, delta, now_utc)
+                        send(report(name, delta, now_local, yandex_info))
                         remember_event(state, fingerprint, name, now_utc)
                         dirty = True
             else:
