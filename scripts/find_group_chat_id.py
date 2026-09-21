@@ -1,8 +1,6 @@
 import os
 import requests
 
-TARGET = "ваававфы"
-
 def main():
     token = os.environ["BOT_TOKEN"].strip()
     r = requests.get(
@@ -13,28 +11,26 @@ def main():
     r.raise_for_status()
     data = r.json()
 
-    matches = []
+    found = []
     for upd in data.get("result", []):
-        msg = upd.get("message") or upd.get("channel_post") or {}
-        text = msg.get("text", "")
-        chat = msg.get("chat", {})
-        if text == TARGET:
-            matches.append({
-                "chat_id": chat.get("id"),
-                "type": chat.get("type"),
-                "title": chat.get("title") or "",
-            })
+        msg = (
+            upd.get("message")
+            or upd.get("channel_post")
+            or upd.get("my_chat_member")
+            or {}
+        )
+        chat = msg.get("chat", {}) if isinstance(msg, dict) else {}
+        if chat.get("type") in ("group", "supergroup"):
+            item = (chat.get("id"), chat.get("type"), chat.get("title") or "")
+            if item not in found:
+                found.append(item)
 
-    if not matches:
-        print("MATCH_NOT_FOUND")
+    if not found:
+        print("NO_GROUP_UPDATES")
         return
 
-    for item in matches:
-        print(
-            f"MATCH chat_id={item['chat_id']} "
-            f"type={item['type']} "
-            f"title={item['title']}"
-        )
+    for chat_id, chat_type, title in found:
+        print(f"GROUP chat_id={chat_id} type={chat_type} title={title}")
 
 if __name__ == "__main__":
     main()
