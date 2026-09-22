@@ -1,0 +1,11 @@
+[Unit]
+Description=Shazam chart monitor - один прогон
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/shazam-monitor
+ExecStart=/opt/shazam-monitor/run.sh
+# Прогон занимает ~30-60с. Если завис — убиваем, чтобы не копились.
+TimeoutStartSec=900
