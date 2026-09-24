@@ -136,6 +136,8 @@ class CheckTrackTests(unittest.TestCase):
             ("Drake", "One Dance", "Coldplay", "One Dance"),
             ("Imagine Dragons", "Believer", "Imagine Dragons", "Thunder"),
             ("Тимати", "Ах какая женщина", "Кавер Группа Нонейм", "Ах какая женщина"),
+            # Прод 24.09.2026: артисты похожи на 55%, склейка давала 89%.
+            ("Matroda", "I Need Your Lovin'", "Marc", "I Need Your Lovin'"),
         ]
         for our_artist, our_title, ya_artist, ya_title in cases:
             with self.subTest(pair=f"{our_artist}/{ya_artist}"):

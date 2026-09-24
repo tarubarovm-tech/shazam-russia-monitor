@@ -68,6 +68,10 @@ except ImportError:
 # Совпадение «артист название» в процентах.
 MATCH_THRESHOLD = 75        # >= этого — считаем, что трек найден
 DOUBT_THRESHOLD = 60        # 60..75 — зона сомнения, отдаём UNKNOWN, не ABSENT
+# Ниже этого артист считается ДРУГИМ, и совпавшее название не спасает пару.
+# 50 было мало: Matroda/Marc = 55%. Соисполнители порог не задевают —
+# token_set_ratio даёт им ~100.
+ARTIST_MATCH_THRESHOLD = 80
 
 SEARCH_RETRIES = 3
 RETRY_BASE_DELAY = 2        # паузы 2с, 4с, 6с
@@ -209,11 +213,16 @@ def _pair_score(our_artist, our_title, ya_artist, ya_title):
     if not norm(our_artist) or not norm(ya_artist):
         artist_score = 100          # артист неизвестен — судим по названию
 
-    # Совсем чужой артист при совпавшем названии — это РАЗНЫЕ треки
-    # («One Dance» у Drake и у Coldplay). Не поднимаем такую пару до PRESENT:
-    # иначе новинка молча считается существующей и до человека не доедет.
-    if artist_score < 50:
-        return joined
+    # Чужой артист при совпавшем названии — это РАЗНЫЕ треки
+    # («One Dance» у Drake и у Coldplay). Такая пара НЕ может быть PRESENT
+    # ни по какому каналу — ни по split, ни по склейке: длинное совпавшее
+    # название вытягивает склейку до 89% даже при чужом артисте.
+    # Прод 24.09.2026: «Matroda — I Need Your Lovin'» сматчился с
+    # «Marc — I Need Your Lovin'» (2006), артисты похожи на 55%, склейка 89%.
+    # Новинку молча сочли существующей, до человека она не доехала.
+    # Потолок — зона сомнения: трек уходит человеку с пометкой «глянь руками».
+    if artist_score < ARTIST_MATCH_THRESHOLD:
+        return min(joined, MATCH_THRESHOLD - 1)
 
     split = round(0.55 * title_score + 0.45 * artist_score)
     return max(joined, split)
